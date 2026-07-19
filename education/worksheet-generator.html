@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<!--
+  FILE     : /education/worksheet-generator.html
+  WEBSITE  : easyaitoolz.com
+  PURPOSE  : AI Worksheet, Quiz & Study Plan Generator — Education Suite
+  TECH     : HTML5 + Tailwind CSS CDN + Vanilla JavaScript
+
+  HOW THIS TOOL WORKS:
+  =====================
+  1. User types a topic and selects material type, grade level, and length
+  2. JavaScript builds a custom system prompt tailored to the material type:
+       - Worksheet → 4 sections (Fill blanks, Short answer, T/F, Labeling)
+       - Quiz      → numbered MCQ questions with A/B/C/D + answer key
+       - Study Plan → week-by-week roadmap with goals and resources
+  3. POST to /api/generate (Cloudflare backend → Gemini, API key hidden)
+  4. renderDocument() classifies each line of the response:
+       ALL CAPS lines     → section headers (indigo bold)
+       "1. 2. 3." lines  → numbered question items with badge
+       "A) B) C) D)" lines → MCQ option pills
+       "T / F" lines     → true/false formatted items
+       "___" lines       → answer blank lines
+       Everything else   → regular paragraph text
+-->
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Worksheet &amp; Quiz Generator &mdash; EasyAIToolz</title>
+  <meta name="description" content="Generate printable worksheets, multiple choice quizzes, and custom study plans with AI. Free, instant, academic-grade content. No signup needed." />
+
+  <!-- Google Fonts: Inter (UI) + Source Serif 4 (document text — feels academic) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif'],
+            doc:  ['Source Serif 4', 'Georgia', 'serif']  /* document/academic text */
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* ── BASE ──────────────────────────────────────────────────────────────*/
+    body {
+      background-color: #06080f;
+      font-family: 'Inter', sans-serif;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+
+    /* ── MESH GRADIENT BACKGROUND ──────────────────────────────────────────
+       Deep indigo-blue-cyan aurora — feels scholarly and intellectual.
+       Cool tones = trust, knowledge, academia. */
+    .mesh-bg {
+      background-color: #06080f;
+      background-image:
+        radial-gradient(ellipse 70% 55% at 8% 18%, rgba(79,70,229,.13) 0%, transparent 58%),
+        radial-gradient(ellipse 60% 45% at 90% 12%, rgba(14,165,233,.09) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 40% at 52% 88%, rgba(99,102,241,.07) 0%, transparent 52%);
+    }
+
+    /* ── FROSTED GLASS NAVBAR ─────────────────────────────────────────────*/
+    .navbar-glass {
+      background: rgba(6, 8, 15, 0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+
+    /* ── GRADIENT HEADING TEXT ─────────────────────────────────────────────
+       Indigo-to-cyan — a clean, academic, trustworthy gradient. */
+    .gradient-text {
+      background: linear-gradient(135deg, #818cf8 0%, #38bdf8 60%, #34d399 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── INPUT FOCUS ───────────────────────────────────────────────────────*/
+    .input-field:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.38);
+      border-color: rgba(99, 102, 241, 0.50);
+    }
+
+    /* ── CUSTOM DROPDOWN ARROW ─────────────────────────────────────────────*/
+    .custom-select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 40px;
+    }
+
+    /* ── GENERATE BUTTON ───────────────────────────────────────────────────
+       Indigo-to-blue gradient — reliable, academic feel. */
+    .btn-generate {
+      background: linear-gradient(135deg, #4f46e5 0%, #2563eb 50%, #0891b2 100%);
+      background-size: 200% 200%;
+      transition: background-position 0.4s ease, opacity 0.2s ease, transform 0.2s ease;
+      box-shadow: 0 4px 24px rgba(79, 70, 229, 0.28);
+    }
+    .btn-generate:hover:not(:disabled) { background-position: right center; transform: translateY(-1px); }
+    .btn-generate:disabled             { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── SPINNER ───────────────────────────────────────────────────────────*/
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 17px; height: 17px;
+      border: 2px solid rgba(255,255,255,.20);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       DOCUMENT PREVIEW STYLES
+       These classes are applied by JavaScript's renderDocument() function.
+       They make the raw AI text look like a real academic document.
+       ══════════════════════════════════════════════════════════════════════ */
+
+    /* ── DOCUMENT SHEET ────────────────────────────────────────────────────
+       The main "paper" container. Slightly lighter than the dark bg to
+       feel like a real sheet of paper (in dark mode context). */
+    #docSheet {
+      font-family: 'Source Serif 4', Georgia, serif;
+      line-height: 1.7;
+    }
+
+    /* ── DOCUMENT TITLE ────────────────────────────────────────────────────
+       The main title of the worksheet/quiz — large, centered, bold.
+       Like a real printed academic document heading. */
+    .doc-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: rgba(255,255,255,0.90);
+      text-align: center;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.5rem 0 1rem;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* ── STUDENT INFO LINE ─────────────────────────────────────────────────
+       The "Name: ___ Date: ___ Score: ___" header line. */
+    .doc-student-info {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.42);
+      text-align: center;
+      letter-spacing: 0.08em;
+      padding-bottom: 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      margin-bottom: 1.25rem;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* ── SECTION HEADER ────────────────────────────────────────────────────
+       e.g., "SECTION 1 — Fill in the Blanks", "ANSWER KEY", "WEEK 1"
+       Stands out clearly to separate sections of the document. */
+    .section-header {
+      font-size: 0.80rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #818cf8;
+      padding: 0.75rem 0 0.4rem;
+      border-top: 1px solid rgba(99,102,241,0.18);
+      margin-top: 0.5rem;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* ── NUMBERED QUESTION ITEM ────────────────────────────────────────────
+       Each numbered question is displayed as a flex row:
+       [number badge] [question text]
+
+       The number badge = a small indigo square, like academic question numbering.
+    */
+    .numbered-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.875rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .numbered-item:last-child { border-bottom: none; }
+
+    .item-number {
+      flex-shrink: 0;
+      width: 26px;
+      height: 26px;
+      background: rgba(99,102,241,0.15);
+      border: 1px solid rgba(99,102,241,0.25);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.70rem;
+      font-weight: 700;
+      color: #a5b4fc;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .item-text {
+      flex: 1;
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.78);
+      padding-top: 0.15rem;
+      line-height: 1.65;
+    }
+
+    /* ── MCQ OPTION ────────────────────────────────────────────────────────
+       Multiple Choice options: [A] [text content]
+       The letter badge is styled differently from numbered items. */
+    .mcq-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.3rem 0 0.3rem 1.5rem;
+    }
+
+    .mcq-letter {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      background: rgba(14,165,233,0.12);
+      border: 1px solid rgba(14,165,233,0.22);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #7dd3fc;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .mcq-text {
+      flex: 1;
+      font-size: 0.875rem;
+      color: rgba(255,255,255,0.65);
+      padding-top: 0.1rem;
+    }
+
+    /* ── BULLET POINT ──────────────────────────────────────────────────────*/
+    .bullet-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.3rem 0 0.3rem 1rem;
+    }
+    .bullet-dot   { color: #6366f1; font-size: 1rem; flex-shrink: 0; line-height: 1.5; }
+    .bullet-text  { flex: 1; font-size: 0.875rem; color: rgba(255,255,255,0.68); line-height: 1.65; }
+
+    /* ── TRUE/FALSE ITEM ───────────────────────────────────────────────────
+       True/False questions: [T / F badge] [statement text] */
+    .true-false-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.875rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .tf-badge {
+      flex-shrink: 0;
+      background: rgba(245,158,11,0.12);
+      border: 1px solid rgba(245,158,11,0.22);
+      border-radius: 6px;
+      padding: 0.2rem 0.5rem;
+      font-size: 0.60rem;
+      font-weight: 700;
+      color: #fcd34d;
+      letter-spacing: 0.06em;
+      font-family: 'Inter', sans-serif;
+      white-space: nowrap;
+    }
+
+    .tf-text {
+      flex: 1;
+      font-size: 0.875rem;
+      color: rgba(255,255,255,0.75);
+      padding-top: 0.1rem;
+    }
+
+    /* ── ANSWER LINE ────────────────────────────────────────────────────────
+       Lines made of underscores "____" for student answer spaces. */
+    .answer-line {
+      font-size: 0.875rem;
+      color: rgba(255,255,255,0.25);
+      letter-spacing: 0.08em;
+      padding: 0.25rem 0 0.25rem 2.5rem;
+    }
+
+    /* ── REGULAR PARAGRAPH TEXT ────────────────────────────────────────────
+       Standard body text in the document. Uses serif font for academic feel. */
+    .doc-text {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.68);
+      line-height: 1.75;
+    }
+
+    /* ── EXAMPLE CHIP HOVER ────────────────────────────────────────────────*/
+    .example-chip { transition: all 0.2s ease; }
+    .example-chip:hover {
+      background: rgba(99,102,241,0.12);
+      border-color: rgba(99,102,241,0.30);
+      color: #a5b4fc;
+    }
+
+    /* ── SCROLLBAR ─────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar       { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0d1117; }
+    ::-webkit-scrollbar-thumb { background: #1e1b4b; border-radius: 4px; }
+
+    html { scroll-behavior: smooth; }
+  </style>
+</head>
+
+
+<body class="mesh-bg min-h-screen">
+
+
+<!-- ==============================================================================
+     NAVIGATION BAR
+     ============================================================================== -->
+<nav class="navbar-glass fixed top-0 left-0 right-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+
+      <div class="flex items-center gap-4">
+
+        <a href="/" class="flex items-center gap-1.5 text-white/45 hover:text-white/85 transition-colors text-sm font-medium group" aria-label="Back to homepage">
+          <span class="group-hover:-translate-x-0.5 transition-transform inline-block">&#8592;</span>
+          <span class="hidden sm:inline">Back</span>
+        </a>
+
+        <div class="w-px h-5 bg-white/10" aria-hidden="true"></div>
+
+        <!-- Indigo-blue SVG logo chip for the Education suite -->
+        <a href="/" class="flex items-center gap-2" aria-label="EasyAIToolz Home">
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="navLgE" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#6366f1"/>
+                <stop offset="100%" stop-color="#38bdf8"/>
+              </linearGradient>
+            </defs>
+            <rect x="2" y="2" width="28" height="28" rx="6" stroke="url(#navLgE)" stroke-width="1.5" fill="rgba(99,102,241,0.07)"/>
+            <rect x="9" y="9" width="14" height="14" rx="3" stroke="url(#navLgE)" stroke-width="1.2" fill="rgba(56,189,248,0.10)"/>
+            <line x1="11" y1="2"  x2="11" y2="5"  stroke="#6366f1" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="21" y1="2"  x2="21" y2="5"  stroke="#6366f1" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="11" y1="27" x2="11" y2="30" stroke="#6366f1" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="21" y1="27" x2="21" y2="30" stroke="#6366f1" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="2"  y1="11" x2="5"  y2="11" stroke="#38bdf8" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="2"  y1="21" x2="5"  y2="21" stroke="#38bdf8" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="27" y1="11" x2="30" y2="11" stroke="#38bdf8" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="27" y1="21" x2="30" y2="21" stroke="#38bdf8" stroke-width="1.2" stroke-linecap="round"/>
+            <circle cx="16" cy="16" r="2.2" fill="url(#navLgE)"/>
+          </svg>
+          <span class="text-[1rem] font-bold leading-none">
+            <span class="text-blue-400">Easy</span><span class="text-purple-400">AI</span><span class="text-pink-400">Toolz</span>
+          </span>
+        </a>
+      </div>
+
+      <span class="hidden sm:flex items-center gap-1.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold px-3 py-1 rounded-full">
+        &#128218; Study Material Generator
+      </span>
+
+    </div>
+  </div>
+</nav>
+
+
+<!-- ==============================================================================
+     PAGE HEADER
+     ============================================================================== -->
+<header class="pt-28 pb-8 px-4 text-center">
+  <div class="max-w-2xl mx-auto">
+
+    <div class="flex items-center justify-center gap-2 text-xs text-white/28 mb-4">
+      <a href="/" class="hover:text-white/55 transition-colors">Home</a>
+      <span>&#8250;</span>
+      <span class="text-white/40">Education Suite</span>
+      <span>&#8250;</span>
+      <span class="text-indigo-400">Study Material Generator</span>
+    </div>
+
+    <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight mb-3">
+      <span class="gradient-text">AI Study</span>
+      <span class="text-white"> Material Generator</span>
+    </h1>
+
+    <p class="text-white/50 text-base leading-relaxed max-w-lg mx-auto">
+      Enter a topic &mdash; get a complete printable worksheet, multiple-choice quiz,
+      or custom study roadmap built by AI. Academic-grade, free, no signup.
+    </p>
+
+  </div>
+</header>
+
+
+<!-- ==============================================================================
+     MAIN WORKSPACE — Two-column layout
+
+     LAYOUT:
+       MOBILE  (< 1024px)  → 1 column, stacked
+       DESKTOP (>= 1024px) → [380px fixed left] | [flexible right]
+
+     The right panel is intentionally given more space because the
+     document output is wider — quizzes with MCQ options need horizontal room.
+     ============================================================================== -->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+  <div class="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 items-start">
+
+
+    <!-- ============================================================
+         LEFT COLUMN: INPUT PANEL
+         ============================================================ -->
+    <div class="flex flex-col gap-5">
+
+      <div class="bg-slate-900/60 border border-white/[.08] rounded-2xl p-6">
+
+        <h2 class="text-sm font-bold text-white mb-6 flex items-center gap-2">
+          <span class="w-7 h-7 rounded-lg bg-indigo-500/15 flex items-center justify-center" aria-hidden="true">&#128218;</span>
+          Study Material Settings
+        </h2>
+
+
+        <!-- ── INPUT 1: TOPIC / SUBJECT ───────────────────────────────────
+             What subject or concept should the material cover?
+             The more specific, the better:
+               VAGUE  → "Science"
+               BETTER → "Photosynthesis" or "Cell Division - Mitosis vs Meiosis"
+               BEST   → "Linear Equations with Two Variables - Grade 9"
+        -->
+        <div class="mb-5">
+          <label for="topicInput" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            1. Topic / Subject
+          </label>
+          <input
+            type="text"
+            id="topicInput"
+            placeholder="e.g., Photosynthesis, Linear Equations, Python Loops..."
+            class="input-field w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm placeholder-white/20 transition-colors"
+          />
+
+          <!-- Quick topic chips — popular academic topics -->
+          <div class="flex flex-wrap gap-1.5 mt-2.5">
+            <button onclick="fillTopic(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">Photosynthesis</button>
+            <button onclick="fillTopic(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">Linear Equations</button>
+            <button onclick="fillTopic(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">World War II</button>
+            <button onclick="fillTopic(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">Python Basics</button>
+            <button onclick="fillTopic(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">Human Digestive System</button>
+            <button onclick="fillTopic(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">Fractions &amp; Decimals</button>
+          </div>
+
+          <p class="text-xs text-white/20 mt-2">
+            <kbd class="bg-white/5 border border-white/10 rounded px-1 py-0.5 font-mono text-xs">Ctrl</kbd>+
+            <kbd class="bg-white/5 border border-white/10 rounded px-1 py-0.5 font-mono text-xs">Enter</kbd> to generate
+          </p>
+        </div>
+
+
+        <!-- ── INPUT 2: MATERIAL TYPE ─────────────────────────────────────
+             The most important dropdown — it controls the ENTIRE structure
+             of the AI output and changes what system prompt instructions are sent.
+
+             Printable Worksheet:
+               → 4 sections: Fill blanks, Short answers, True/False, Labeling
+               → Great for classroom use, printed tests, homework
+
+             Multiple Choice Quiz:
+               → Numbered questions each with A) B) C) D) options
+               → Includes an ANSWER KEY at the end
+               → Perfect for online tests, auto-grading
+
+             Custom Study Plan:
+               → Week-by-week roadmap with topics, resources, goals
+               → Includes daily schedule and success metrics
+               → Great for exam prep and self-study
+        -->
+        <div class="mb-5">
+          <label for="typeSelect" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            2. Material Type
+          </label>
+          <select id="typeSelect" class="input-field custom-select w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm transition-colors appearance-none cursor-pointer">
+            <option value="Printable Worksheet">&#128196; Printable Worksheet</option>
+            <option value="Multiple Choice Quiz">&#9989; Multiple Choice Quiz</option>
+            <option value="Custom Study Plan">&#128197; Custom Study Plan / Roadmap</option>
+          </select>
+        </div>
+
+
+        <!-- ── INPUT 3: GRADE / DIFFICULTY LEVEL ─────────────────────────
+             Controls vocabulary, question complexity, and assumed knowledge level.
+             The AI adjusts:
+               Primary   → simple words, basic concepts, short sentences
+               High School → technical terms, multi-step problems, analysis
+               University → advanced theory, research level, critical thinking
+        -->
+        <div class="mb-5">
+          <label for="gradeSelect" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            3. Grade Level / Difficulty
+          </label>
+          <select id="gradeSelect" class="input-field custom-select w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm transition-colors appearance-none cursor-pointer">
+            <option value="Primary School (Ages 6-11)">&#127807; Primary School (Ages 6-11)</option>
+            <option value="Middle School (Ages 11-14)">&#128218; Middle School (Ages 11-14)</option>
+            <option value="High School (Ages 14-18)" selected>&#127979; High School (Ages 14-18)</option>
+            <option value="University / Advanced Level">&#127891; University / Advanced Level</option>
+          </select>
+        </div>
+
+
+        <!-- ── INPUT 4: OUTPUT LENGTH ─────────────────────────────────────
+             Controls how much content the AI generates.
+             Short/10 → a focused, printable one-page test
+             Long/20  → a comprehensive exam or detailed study plan
+        -->
+        <div class="mb-7">
+          <label for="lengthSelect" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            4. Output Length
+          </label>
+          <select id="lengthSelect" class="input-field custom-select w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm transition-colors appearance-none cursor-pointer">
+            <option value="Short (10 questions or a 2-week plan)">&#9711; Short (10 questions / 2-week plan)</option>
+            <option value="Medium (15 questions or a 4-week plan)">&#9673; Medium (15 questions / 4-week plan)</option>
+            <option value="Long / Comprehensive (20 questions or a detailed 6-week plan)" selected>&#9679; Long &amp; Comprehensive (20 questions / 6-week)</option>
+          </select>
+        </div>
+
+
+        <!-- ── GENERATE BUTTON ────────────────────────────────────────────
+             onclick="generateMaterial()" — calls the main JS function.
+             JS disables this during the API call and shows a spinner.
+        -->
+        <button
+          id="generateBtn"
+          onclick="generateMaterial()"
+          class="btn-generate w-full text-white font-bold py-4 rounded-xl text-base flex items-center justify-center gap-2.5 tracking-wide"
+        >
+          <span id="btnIcon" aria-hidden="true">&#128218;</span>
+          <span id="btnText">Generate Study Material</span>
+        </button>
+
+      </div><!-- end input card -->
+
+
+      <!-- Material type guide -->
+      <div class="bg-indigo-500/5 border border-indigo-500/15 rounded-xl p-4">
+        <p class="text-xs font-bold text-indigo-400/75 mb-3 uppercase tracking-widest">What Each Type Generates</p>
+        <dl class="text-xs text-white/32 space-y-2.5 leading-relaxed">
+          <div class="flex items-start gap-2">
+            <span class="text-indigo-400 mt-0.5">&#128196;</span>
+            <div><dt class="font-semibold text-white/45 inline">Worksheet &mdash;</dt><dd class="inline"> Fill-blanks + Short answers + T/F + Labeling</dd></div>
+          </div>
+          <div class="flex items-start gap-2">
+            <span class="text-blue-400 mt-0.5">&#9989;</span>
+            <div><dt class="font-semibold text-white/45 inline">Quiz &mdash;</dt><dd class="inline"> Numbered MCQ (A/B/C/D) + full answer key</dd></div>
+          </div>
+          <div class="flex items-start gap-2">
+            <span class="text-cyan-400 mt-0.5">&#128197;</span>
+            <div><dt class="font-semibold text-white/45 inline">Study Plan &mdash;</dt><dd class="inline"> Week-by-week roadmap + goals + daily schedule</dd></div>
+          </div>
+        </dl>
+      </div>
+
+    </div><!-- end left column -->
+
+
+    <!-- ============================================================
+         RIGHT COLUMN: DOCUMENT PREVIEW PANEL
+         Styled to look like an academic paper/document.
+
+         STATES:
+           1. emptyState   — shown before any generation
+           2. docSheet     — shown when loading OR when result is ready
+              Loading: animated skeleton lines
+              Result : smart-rendered academic document
+
+         JavaScript's renderDocument() classifies each AI response line
+         and applies the appropriate CSS class for academic formatting.
+         ============================================================ -->
+    <div class="flex flex-col gap-4 lg:sticky lg:top-24">
+
+      <!-- Document container card -->
+      <div class="bg-slate-900/60 border border-white/[.08] rounded-2xl overflow-hidden">
+
+        <!-- Panel title bar — mimics a document editor toolbar -->
+        <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/[.06]" style="background:rgba(255,255,255,0.025)">
+          <div class="flex items-center gap-2.5">
+            <!-- Three decorative dots (like a text editor chrome) -->
+            <div class="flex gap-1.5" aria-hidden="true">
+              <div class="w-2.5 h-2.5 rounded-full bg-red-500/50"></div>
+              <div class="w-2.5 h-2.5 rounded-full bg-yellow-500/50"></div>
+              <div class="w-2.5 h-2.5 rounded-full bg-green-500/50"></div>
+            </div>
+            <div class="w-px h-4 bg-white/10 mx-1" aria-hidden="true"></div>
+            <h2 class="text-xs font-semibold text-white/50 tracking-wider uppercase">Academic Document Preview</h2>
+          </div>
+
+          <!-- COPY DOCUMENT BUTTON
+               Hidden until a document is generated.
+               onclick="copyDocument()" copies the raw AI text. -->
+          <button
+            id="copyBtn"
+            onclick="copyDocument()"
+            class="hidden items-center gap-1.5 text-xs text-white/38 hover:text-indigo-400 px-3 py-1.5 rounded-lg border border-white/[.08] hover:border-indigo-500/30 transition-all"
+          >
+            <span>&#128203;</span>
+            <span>Copy Document</span>
+          </button>
+        </div>
+
+
+        <!-- ── SCROLLABLE DOCUMENT AREA ────────────────────────────────── -->
+        <div class="overflow-y-auto" style="min-height: 520px; max-height: 75vh;">
+          <div class="p-6 sm:p-8">
+
+
+            <!-- ── EMPTY STATE ─────────────────────────────────────────────
+                 Shown before the user clicks Generate.
+                 Contains a decorative preview of what the document looks like. -->
+            <div id="emptyState" class="flex flex-col items-center justify-center gap-6 py-12 text-center">
+
+              <!-- Document stack icon -->
+              <div class="relative">
+                <!-- Shadow page behind -->
+                <div class="absolute -bottom-1.5 -right-1.5 w-16 h-20 bg-white/3 border border-white/6 rounded-lg"></div>
+                <div class="absolute -bottom-0.5 -right-0.5 w-16 h-20 bg-white/5 border border-white/8 rounded-lg"></div>
+                <!-- Main doc icon -->
+                <div class="relative w-16 h-20 bg-indigo-500/10 border border-indigo-500/20 rounded-lg flex flex-col items-center justify-center gap-2 p-3">
+                  <div class="w-full h-1 bg-indigo-500/40 rounded-full"></div>
+                  <div class="w-4/5 h-1 bg-white/15 rounded-full"></div>
+                  <div class="w-full h-1 bg-white/10 rounded-full"></div>
+                  <div class="w-full h-1 bg-white/10 rounded-full"></div>
+                  <div class="w-3/4 h-1 bg-white/8 rounded-full"></div>
+                </div>
+              </div>
+
+              <div>
+                <p class="text-white/50 font-semibold mb-1.5">Your document will appear here</p>
+                <p class="text-white/25 text-sm max-w-xs leading-relaxed">
+                  Choose a topic, material type, and grade level on the left, then click
+                  <span class="text-indigo-400/70 font-medium">Generate Study Material</span>
+                </p>
+              </div>
+
+              <!-- Mini skeleton preview showing the document structure -->
+              <div class="w-full max-w-sm space-y-3 opacity-20 pointer-events-none select-none">
+                <div class="text-center space-y-1.5">
+                  <div class="h-3 bg-white/20 rounded w-1/2 mx-auto"></div>
+                  <div class="h-2 bg-white/10 rounded w-3/4 mx-auto"></div>
+                </div>
+                <div class="h-px bg-white/8 w-full"></div>
+                <div class="h-2 bg-indigo-500/30 rounded w-1/3"></div>
+                <!-- Numbered items skeleton -->
+                <div class="space-y-2">
+                  <div class="flex items-center gap-3">
+                    <div class="w-6 h-6 rounded-md bg-indigo-500/20 flex-shrink-0"></div>
+                    <div class="h-2 bg-white/10 rounded flex-1"></div>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <div class="w-6 h-6 rounded-md bg-indigo-500/20 flex-shrink-0"></div>
+                    <div class="h-2 bg-white/8 rounded w-4/5"></div>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <div class="w-6 h-6 rounded-md bg-indigo-500/20 flex-shrink-0"></div>
+                    <div class="h-2 bg-white/10 rounded flex-1"></div>
+                  </div>
+                </div>
+                <!-- MCQ skeleton -->
+                <div class="pl-8 space-y-1.5">
+                  <div class="flex items-center gap-2">
+                    <div class="w-5 h-5 rounded-full bg-blue-500/20 flex-shrink-0"></div>
+                    <div class="h-2 bg-white/8 rounded w-3/4"></div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <div class="w-5 h-5 rounded-full bg-blue-500/15 flex-shrink-0"></div>
+                    <div class="h-2 bg-white/6 rounded w-2/3"></div>
+                  </div>
+                </div>
+              </div>
+
+            </div><!-- end emptyState -->
+
+
+            <!-- ── DOCUMENT SHEET ──────────────────────────────────────────
+                 Hidden initially (class="hidden").
+                 JavaScript removes "hidden" and fills this div.
+
+                 generateMaterial() shows this with:
+                   → Loading: a skeleton animation
+                   → Result:  smart-rendered academic document via renderDocument()
+
+                 renderDocument() applies these CSS classes to each line:
+                   .doc-title        — document heading
+                   .doc-student-info — Name/Date/Score line
+                   .section-header   — ALL CAPS section titles (indigo)
+                   .numbered-item    — "1. 2. 3." questions (number badge)
+                   .mcq-option       — "A) B) C) D)" options (circle badge)
+                   .true-false-item  — "T / F" items (amber badge)
+                   .bullet-item      — "- " bullet points
+                   .answer-line      — "__________" blank lines
+                   .doc-text         — default paragraph text
+            -->
+            <div id="docSheet" class="hidden">
+              <!-- Content rendered here by JavaScript -->
+            </div>
+
+          </div><!-- end p-6 -->
+        </div><!-- end scrollable area -->
+
+      </div><!-- end document card -->
+
+    </div><!-- end right column -->
+
+  </div><!-- end two-column grid -->
+</main>
+
+
+<!-- ==============================================================================
+     FOOTER
+     ============================================================================== -->
+<footer class="border-t border-white/[.05] py-6">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+      <span class="text-sm font-bold">
+        <span class="text-blue-400">Easy</span><span class="text-purple-400">AI</span><span class="text-pink-400">Toolz</span>
+        <span class="text-white/18 font-normal text-xs ml-2">&mdash; Education Suite</span>
+      </span>
+      <div class="flex items-center gap-3 text-xs text-white/22">
+        <a href="/" class="hover:text-white/55 transition-colors">&#8592; All Tools</a>
+        <span>|</span>
+        <a href="/creative/poem-generator.html" class="hover:text-white/55 transition-colors">Poem Generator &#8594;</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+<!-- ==============================================================================
+     JAVASCRIPT — worksheet_logic.js embedded here at build time.
+     Placed at the bottom of <body> so all HTML elements exist before JS runs.
+     ============================================================================== -->
+<script>
+// ============================================================
+// worksheet_logic.js
+// JavaScript for the AI Worksheet, Quiz & Study Plan Generator
+// Built into worksheet-generator.html at build time
+// ============================================================
+
+
+// ─── FUNCTION 1: generateMaterial ────────────────────────────────────────────
+// The main function. Runs when the user clicks "Generate Study Material 📚".
+//
+// FULL DATA FLOW:
+//   Step 1: Read the topic text + 3 dropdown values
+//   Step 2: Validate — topic is required
+//   Step 3: Build the AI system prompt based on material type
+//   Step 4: Show loading state in the document preview
+//   Step 5: POST to /api/generate (our secure backend)
+//   Step 6: Wait for the AI response
+//   Step 7: Smart-render the response as a formatted academic document
+//   Step 8: Reset the button to normal
+async function generateMaterial() {
+
+  // ── STEP 1: Read all inputs ──────────────────────────────────────────────
+  var topic    = document.getElementById('topicInput').value.trim();
+  var type     = document.getElementById('typeSelect').value;
+  var grade    = document.getElementById('gradeSelect').value;
+  var length   = document.getElementById('lengthSelect').value;
+
+  // ── STEP 2: Validate ─────────────────────────────────────────────────────
+  if (!topic) {
+    var input = document.getElementById('topicInput');
+    input.style.borderColor = 'rgba(99,102,241,0.7)';
+    input.placeholder = 'Please enter a topic or subject ✦';
+    setTimeout(function() {
+      input.style.borderColor = '';
+      input.placeholder = 'e.g., Photosynthesis, Linear Equations, Python Loops...';
+    }, 2500);
+    return;
+  }
+
+  // ── STEP 3: Build AI System Prompt ──────────────────────────────────────
+  // We tailor the prompt based on the material type the user selected.
+  // Each type needs different formatting instructions for the AI.
+  var typeInstructions = '';
+
+  if (type === 'Printable Worksheet') {
+    typeInstructions =
+      'Create a comprehensive PRINTABLE WORKSHEET with clear sections:\n' +
+      '- Start with a header: "WORKSHEET: ' + topic + '" followed by "Name: _______  Date: _______  Score: ___/"\n' +
+      '- SECTION 1 — Fill in the Blanks (5 questions): "1. __________ is defined as..."\n' +
+      '- SECTION 2 — Short Answer Questions (5 questions): numbered, each needs 2-3 lines of answer space shown as "___"\n' +
+      '- SECTION 3 — True or False (5 statements): "True / False   [statement]"\n' +
+      '- SECTION 4 — Diagram or Concept Labeling: Describe a simple labeling exercise\n' +
+      'Use "____" to show blank spaces for student answers.\n';
+
+  } else if (type === 'Multiple Choice Quiz') {
+    typeInstructions =
+      'Create a MULTIPLE CHOICE QUIZ with:\n' +
+      '- A header: "QUIZ: ' + topic + '" and "Name: _______ Date: _______ Score: ___/"\n' +
+      '- Each question numbered (1. 2. 3. etc.)\n' +
+      '- Each question has exactly 4 options labeled A) B) C) D)\n' +
+      '- After ALL questions, add an "ANSWER KEY" section with "1. B  2. A  3. C..." format\n' +
+      '- Questions must be clear, unambiguous, and strictly accurate\n';
+
+  } else {
+    // Custom Study Plan
+    typeInstructions =
+      'Create a CUSTOM STUDY PLAN / ROADMAP with:\n' +
+      '- A header: "STUDY PLAN: ' + topic + '"\n' +
+      '- Divide the plan into WEEKS (Week 1, Week 2, etc.) or PHASES\n' +
+      '- For each week: list specific Topics to Study, Resources suggested, and Goals to achieve\n' +
+      '- Include a "DAILY STUDY SCHEDULE" section with time recommendations\n' +
+      '- End with "SUCCESS METRICS" — how to know you\'ve mastered the topic\n';
+  }
+
+  var systemPrompt =
+    'You are an elite university professor and academic content creator with 20 years of experience. ' +
+    'Generate high-quality educational material with ZERO errors.\n\n' +
+    'PARAMETERS:\n' +
+    '- Topic / Subject: ' + topic + '\n' +
+    '- Material Type: ' + type + '\n' +
+    '- Grade / Difficulty Level: ' + grade + '\n' +
+    '- Length / Size: ' + length + '\n\n' +
+    'CONTENT REQUIREMENTS:\n' + typeInstructions +
+    '\nFORMATTING RULES:\n' +
+    '1. Use clear numbered formatting for all questions\n' +
+    '2. Add blank lines between sections for readability\n' +
+    '3. Use ALL CAPS for section headers (e.g., SECTION 1, ANSWER KEY)\n' +
+    '4. Keep language appropriate for ' + grade + ' level\n' +
+    '5. Make content strictly academic and factually accurate\n' +
+    '6. Output ONLY the final educational document — no intro, no outro, no commentary\n';
+
+  // ── STEP 4: Set Loading State ────────────────────────────────────────────
+  var btn      = document.getElementById('generateBtn');
+  var btnText  = document.getElementById('btnText');
+  var btnIcon  = document.getElementById('btnIcon');
+  var copyBtn  = document.getElementById('copyBtn');
+  var docSheet = document.getElementById('docSheet');
+  var emptyMsg = document.getElementById('emptyState');
+
+  btn.disabled        = true;
+  btnText.textContent = 'Generating...';
+  btnIcon.innerHTML   = '<span class="spinner"></span>';
+  copyBtn.classList.add('hidden');
+
+  // Show the doc sheet with a skeleton loading animation
+  emptyMsg.classList.add('hidden');
+  docSheet.classList.remove('hidden');
+  docSheet.innerHTML =
+    '<div class="flex flex-col gap-4 py-8 px-2 items-center">' +
+      '<div class="flex items-center gap-2.5 self-start w-full">' +
+        '<div class="w-5 h-5 rounded border-2 border-indigo-500/30 border-t-indigo-400 animate-spin flex-shrink-0"></div>' +
+        '<p class="text-indigo-400/70 text-sm font-medium">Your ' + escapeHTML(type) + ' is being generated...</p>' +
+      '</div>' +
+      '<div class="w-full space-y-3 mt-4 opacity-40">' +
+        // Skeleton lines that mimic a real document structure
+        '<div class="h-4 bg-indigo-500/20 rounded w-1/2 mx-auto"></div>' +
+        '<div class="h-2.5 bg-white/8 rounded w-3/4 mx-auto"></div>' +
+        '<div class="h-px bg-white/8 w-full mt-2 mb-4"></div>' +
+        '<div class="h-3 bg-white/8 rounded w-1/3"></div>' +
+        '<div class="h-2.5 bg-white/6 rounded w-full"></div>' +
+        '<div class="h-2.5 bg-white/6 rounded w-5/6"></div>' +
+        '<div class="h-2.5 bg-white/6 rounded w-full"></div>' +
+        '<div class="h-2.5 bg-white/6 rounded w-4/5"></div>' +
+        '<div class="h-px bg-white/6 w-full my-3"></div>' +
+        '<div class="h-3 bg-white/8 rounded w-1/3"></div>' +
+        '<div class="h-2.5 bg-white/6 rounded w-full"></div>' +
+        '<div class="h-2.5 bg-white/6 rounded w-5/6"></div>' +
+        '<div class="h-2.5 bg-white/6 rounded w-full"></div>' +
+      '</div>' +
+    '</div>';
+
+  // ── STEP 5 + 6: POST to backend and await ────────────────────────────────
+  try {
+
+    var response = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: systemPrompt })
+    });
+
+    var data = await response.json();
+
+    // ── STEP 7: Smart-render the result ───────────────────────────────────
+    if (data.result) {
+      renderDocument(data.result.trim(), type, topic, grade);
+      copyBtn.classList.remove('hidden');
+      window._currentDocText = data.result.trim(); // store for copy function
+    } else {
+      showDocError('AI Error: ' + (data.error || 'Unknown error. Please try again.'));
+    }
+
+  } catch (err) {
+    showDocError('Network error. Make sure dev-server.js is running and your API key is set in .env.local');
+  }
+
+  // ── STEP 8: Reset button ─────────────────────────────────────────────────
+  btn.disabled        = false;
+  btnText.textContent = 'Generate Study Material';
+  btnIcon.textContent = '\uD83D\uDCDA'; // 📚
+}
+
+
+// ─── FUNCTION 2: renderDocument ──────────────────────────────────────────────
+// Takes the raw AI text and renders it as a beautifully formatted
+// academic document in the preview panel.
+//
+// SMART RENDERING STRATEGY:
+//   We scan each line of the AI response and classify it into one of these types:
+//     - TITLE/HEADER    → large bold text, centered, with a bottom border
+//     - SECTION HEADER  → medium bold text, indigo color, uppercase
+//     - NUMBERED ITEM   → rendered with a styled number badge
+//     - MCQ OPTION      → A) B) C) D) options styled as option pills
+//     - BLANK LINE      → adds vertical spacing between sections
+//     - NORMAL TEXT     → standard readable paragraph text
+//
+// This approach avoids any complex markdown parser — pure regex classification.
+//
+// Parameters:
+//   rawText  — the complete AI response text
+//   type     — material type (Worksheet / Quiz / Study Plan)
+//   topic    — the subject/topic (for the page title)
+//   grade    — difficulty level (shown in the doc metadata bar)
+function renderDocument(rawText, type, topic, grade) {
+
+  var docSheet = document.getElementById('docSheet');
+  var lines    = rawText.split('\n');
+
+  // ── Build the document header bar ────────────────────────────────────────
+  // Shows type badge + topic + grade level — like a real academic doc header
+  var typeColors = {
+    'Printable Worksheet':        'bg-indigo-500/15 border-indigo-500/30 text-indigo-400',
+    'Multiple Choice Quiz':       'bg-blue-500/15 border-blue-500/30 text-blue-400',
+    'Custom Study Plan':          'bg-cyan-500/15 border-cyan-500/30 text-cyan-400'
+  };
+  var typeIcons = {
+    'Printable Worksheet': '&#128196;',
+    'Multiple Choice Quiz': '&#9989;',
+    'Custom Study Plan': '&#128197;'
+  };
+  var typeColor = typeColors[type] || typeColors['Printable Worksheet'];
+  var typeIcon  = typeIcons[type]  || '&#128196;';
+
+  var metaBar =
+    '<div class="flex flex-wrap items-center gap-2 mb-5 pb-4 border-b border-indigo-500/15">' +
+      '<span class="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-lg border ' + typeColor + '">' +
+        '<span>' + typeIcon + '</span>' +
+        '<span>' + escapeHTML(type) + '</span>' +
+      '</span>' +
+      '<span class="text-white/30 text-xs">&#8250;</span>' +
+      '<span class="text-xs text-white/45">' + escapeHTML(topic) + '</span>' +
+      '<span class="text-white/20 text-xs ml-auto">' + escapeHTML(grade) + '</span>' +
+    '</div>';
+
+  // ── Render each line ──────────────────────────────────────────────────────
+  var htmlLines = lines.map(function(line, index) {
+    var trimmed = line.trim();
+
+    // BLANK LINE: adds visual spacing between sections
+    if (!trimmed) {
+      return '<div class="h-3"></div>';
+    }
+
+    // DOCUMENT TITLE (e.g., "WORKSHEET: Photosynthesis" or "QUIZ: ...")
+    // Detection: line starts with WORKSHEET:, QUIZ:, STUDY PLAN:
+    if (/^(WORKSHEET|QUIZ|STUDY PLAN|TEST|EXAM)\s*:/i.test(trimmed)) {
+      return '<div class="doc-title">' + escapeHTML(trimmed) + '</div>';
+    }
+
+    // STUDENT INFO LINE (Name: __ Date: __ Score: __)
+    // Detection: contains "Name:" and "Date:" — it's a header info line
+    if (/Name\s*:/i.test(trimmed) && /Date\s*:/i.test(trimmed)) {
+      return '<div class="doc-student-info">' + escapeHTML(trimmed) + '</div>';
+    }
+
+    // SECTION HEADER (ALL CAPS line, or starts with SECTION / PART / WEEK / PHASE)
+    // Detection: all capitals, or explicit section keyword at start
+    if (
+      /^(SECTION|PART|WEEK|PHASE|DAY|INSTRUCTIONS?|ANSWER\s*KEY|DIRECTIONS?|OBJECTIVES?|GOALS?|RESOURCES?|SCHEDULE|SUCCESS|NOTES?)\b/i.test(trimmed) ||
+      (trimmed === trimmed.toUpperCase() && trimmed.length > 3 && /^[A-Z\s\d:\/\-]+$/.test(trimmed))
+    ) {
+      return '<div class="section-header">' + escapeHTML(trimmed) + '</div>';
+    }
+
+    // MCQ OPTION LINE (A) ... or B. ... or a) ...)
+    // Detection: starts with a single letter followed by ) or . and a space
+    if (/^[A-Da-d][).]\s+/.test(trimmed)) {
+      var letter  = trimmed[0].toUpperCase();
+      var content = trimmed.slice(2).trim();
+      var isAns   = /^[A-D]$/.test(letter);
+      return '<div class="mcq-option">' +
+               '<span class="mcq-letter">' + escapeHTML(letter) + '</span>' +
+               '<span class="mcq-text">' + escapeHTML(content) + '</span>' +
+             '</div>';
+    }
+
+    // NUMBERED QUESTION / ITEM (1. 2. 10. etc.)
+    // Detection: starts with a number followed by . or ) and a space
+    var numberedMatch = trimmed.match(/^(\d{1,2})[.)]\s+(.*)/);
+    if (numberedMatch) {
+      var num  = numberedMatch[1];
+      var text = numberedMatch[2];
+      return '<div class="numbered-item">' +
+               '<span class="item-number">' + escapeHTML(num) + '</span>' +
+               '<span class="item-text">' + escapeHTML(text) + '</span>' +
+             '</div>';
+    }
+
+    // BULLET POINT LINE (starts with - or • or *)
+    if (/^[-•*]\s+/.test(trimmed)) {
+      var bulletText = trimmed.replace(/^[-•*]\s+/, '');
+      return '<div class="bullet-item">' +
+               '<span class="bullet-dot">&#8250;</span>' +
+               '<span class="bullet-text">' + escapeHTML(bulletText) + '</span>' +
+             '</div>';
+    }
+
+    // BLANK LINE / ANSWER LINE (contains only underscores)
+    if (/^_{4,}/.test(trimmed)) {
+      return '<div class="answer-line">' + escapeHTML(trimmed) + '</div>';
+    }
+
+    // TRUE/FALSE ITEM
+    if (/^True\s*\/\s*False/i.test(trimmed) || /^T\s*\/\s*F/i.test(trimmed)) {
+      return '<div class="true-false-item">' +
+               '<span class="tf-badge">T / F</span>' +
+               '<span class="tf-text">' + escapeHTML(trimmed.replace(/^(True\s*\/\s*False|T\s*\/\s*F)\s*/i, '')) + '</span>' +
+             '</div>';
+    }
+
+    // DEFAULT: regular paragraph text
+    return '<p class="doc-text">' + escapeHTML(trimmed) + '</p>';
+
+  });
+
+  // ── Assemble and inject into the DOM ────────────────────────────────────
+  docSheet.innerHTML = metaBar + htmlLines.join('');
+}
+
+
+// ─── FUNCTION 3: showDocError ─────────────────────────────────────────────────
+// Shows a friendly error inside the document panel.
+function showDocError(message) {
+  document.getElementById('docSheet').innerHTML =
+    '<div class="flex flex-col gap-3 p-2">' +
+      '<div class="flex items-center gap-2 text-red-400">' +
+        '<span>&#9888;</span><span class="font-semibold text-sm">Something went wrong</span>' +
+      '</div>' +
+      '<pre class="text-xs text-white/40 whitespace-pre-wrap leading-relaxed">' + escapeHTML(message) + '</pre>' +
+      '<button onclick="generateMaterial()" class="self-start text-xs bg-white/5 hover:bg-white/10 border border-white/10 text-white/50 px-4 py-2 rounded-lg transition-colors">Try Again</button>' +
+    '</div>';
+}
+
+
+// ─── FUNCTION 4: copyDocument ─────────────────────────────────────────────────
+// Copies the raw generated document text to the clipboard.
+async function copyDocument() {
+  var text = window._currentDocText;
+  if (!text) return;
+
+  try {
+    await navigator.clipboard.writeText(text);
+
+    var btn      = document.getElementById('copyBtn');
+    var origHTML = btn.innerHTML;
+    btn.innerHTML = '<span>\u2713</span><span>Copied!</span>';
+    btn.classList.add('text-indigo-400');
+    setTimeout(function() {
+      btn.innerHTML = origHTML;
+      btn.classList.remove('text-indigo-400');
+    }, 2000);
+
+  } catch (e) {
+    // Fallback: select all text in the doc sheet
+    var range = document.createRange();
+    range.selectNode(document.getElementById('docSheet'));
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+  }
+}
+
+
+// ─── FUNCTION 5: fillTopic ───────────────────────────────────────────────────
+// Fills the topic input with a quick-fill example chip text.
+function fillTopic(text) {
+  document.getElementById('topicInput').value = text;
+  document.getElementById('topicInput').focus();
+}
+
+
+// ─── HELPER: escapeHTML ───────────────────────────────────────────────────────
+// Prevents XSS by converting HTML special characters to safe text entities.
+// Always call this on AI-generated text before inserting into innerHTML.
+function escapeHTML(str) {
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(String(str)));
+  return div.innerHTML;
+}
+
+
+// ─── KEYBOARD SHORTCUT ────────────────────────────────────────────────────────
+// Ctrl+Enter / Cmd+Enter on the topic field triggers generation.
+document.getElementById('topicInput').addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    generateMaterial();
+  }
+});
+
+</script>
+
+<script src="/assets/js/antigravity-core.js"></script>
+</body>
+</html>

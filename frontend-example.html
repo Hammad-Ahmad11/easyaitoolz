@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Tool — easyaitoolz.com</title>
+</head>
+<body>
+
+  <h2>Ask AI</h2>
+
+  <!-- A simple text box for the user to type their question -->
+  <textarea id="promptInput" rows="4" cols="50" placeholder="Type your question here..."></textarea>
+  <br><br>
+
+  <!-- Clicking this button will trigger the API call -->
+  <button onclick="askAI()">Ask AI</button>
+  <br><br>
+
+  <!-- The AI's answer will appear inside this paragraph -->
+  <p id="output">Answer will appear here...</p>
+
+  
+
+<!-- ANTIGRAVITY:BEGIN (auto-generated, safe to re-run) -->
+<script src="/assets/js/antigravity-core.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.initAntigravityTool) {
+      window.initAntigravityTool({
+        "inputId": "promptInput",
+        "outputId": "output",
+        "buttonId": "generateBtn",
+        "statusId": "statusMessage",
+        "toolContext": "Frontend Example"
+});
+    } else {
+      console.error('Antigravity core failed to load.');
+    }
+  });
+</script>
+<!-- ANTIGRAVITY:END -->
+</body>
+</html>

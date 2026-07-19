@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<!--
+  FILE     : /creative/logo-maker.html
+  WEBSITE  : easyaitoolz.com
+  PURPOSE  : AI Logo Maker & Brand Identity Builder — Creative Suite
+  TECH     : HTML5 + Tailwind CSS CDN + Vanilla JavaScript
+
+  HOW THIS TOOL WORKS:
+  =====================
+  1. User enters their brand name + selects industry, vibe, and color preference
+  2. JavaScript builds an expert brand design system prompt
+  3. POST to /api/generate — Cloudflare backend calls Gemini (API key hidden)
+  4. AI returns:
+       "Icon Concept: [...] | Colors: [#hex1,#hex2,#hex3] | Typography: [...] | Layout: [...]"
+  5. parseBrandResponse() extracts all 4 parts using regex + string splitting
+  6. renderBrandIdentity() builds:
+       - A live CSS preview box showing the brand name styled with AI's colors
+       - 3 clickable color swatch cards
+       - Typography recommendation block
+       - Icon concept description
+       - Layout guide
+-->
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Logo Maker &amp; Brand Identity Builder &mdash; EasyAIToolz</title>
+  <meta name="description" content="Generate a complete brand identity with AI: logo concept, color palette, typography, and layout guide. Free, no signup required." />
+
+  <!-- Google Fonts: Inter for UI + a selection of logo-worthy display fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@400;700&family=Montserrat:wght@300;700;900&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans:    ['Inter', 'ui-sans-serif'],
+            display: ['Space Grotesk', 'Inter', 'ui-sans-serif'],
+            luxury:  ['Playfair Display', 'Georgia', 'serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* ── BASE ──────────────────────────────────────────────────────────────*/
+    body {
+      background-color: #06080f;
+      font-family: 'Inter', sans-serif;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+
+    /* ── MESH GRADIENT BACKGROUND ──────────────────────────────────────────
+       Violet-blue-purple aurora — feels like a premium design studio. */
+    .mesh-bg {
+      background-color: #06080f;
+      background-image:
+        radial-gradient(ellipse 70% 55% at 10% 15%, rgba(124,58,237,.13) 0%, transparent 58%),
+        radial-gradient(ellipse 60% 45% at 90% 10%, rgba(79,70,229,.10) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 40% at 55% 88%, rgba(217,70,239,.07) 0%, transparent 52%);
+    }
+
+    /* ── FROSTED GLASS NAVBAR ─────────────────────────────────────────────*/
+    .navbar-glass {
+      background: rgba(6, 8, 15, 0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+
+    /* ── GRADIENT HEADING TEXT ─────────────────────────────────────────────
+       Violet-to-blue gradient matches a premium design brand feeling. */
+    .gradient-text {
+      background: linear-gradient(135deg, #a78bfa 0%, #818cf8 40%, #60a5fa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── INPUT FOCUS ───────────────────────────────────────────────────────*/
+    .input-field:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.38);
+      border-color: rgba(139, 92, 246, 0.50);
+    }
+
+    /* ── CUSTOM DROPDOWN ARROW ─────────────────────────────────────────────*/
+    .custom-select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b5cf6' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 40px;
+    }
+
+    /* ── GENERATE BUTTON ───────────────────────────────────────────────────
+       Deep violet-to-indigo gradient — feels premium and creative. */
+    .btn-generate {
+      background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #2563eb 100%);
+      background-size: 200% 200%;
+      transition: background-position 0.4s ease, opacity 0.2s ease, transform 0.2s ease;
+      box-shadow: 0 4px 24px rgba(124, 58, 237, 0.30);
+    }
+    .btn-generate:hover:not(:disabled) { background-position: right center; transform: translateY(-1px); }
+    .btn-generate:disabled             { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── SPINNER ───────────────────────────────────────────────────────────*/
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 17px; height: 17px;
+      border: 2px solid rgba(255,255,255,.20);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    /* ── LIVE LOGO PREVIEW CARD ────────────────────────────────────────────
+       This is the main output element — a styled brand mockup card.
+
+       DESIGN:
+         - Dark background (overridden by JS with the AI's color suggestion)
+         - Flex row: [icon badge] [brand name area]
+         - Padding + rounded corners for a clean "brand card" feel
+         - min-height to give it enough space to feel like a real logo area
+    */
+    .logo-preview-card {
+      background: #0d0d1a;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 1rem;
+      padding: 1.75rem;
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      flex-wrap: wrap;
+      min-height: 110px;
+      transition: all 0.4s ease;
+    }
+
+    /* ── ICON BADGE ─────────────────────────────────────────────────────────
+       A colored circle showing the brand's initials.
+       JS replaces the background with the AI's gradient color scheme. */
+    .logo-icon-badge {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.40);
+    }
+    .loading-badge { background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04)) !important; }
+
+    /* ── BRAND NAME IN LOGO PREVIEW ─────────────────────────────────────────
+       The brand name rendered in logo style.
+       JS sets color + letter-spacing based on the selected vibe. */
+    .logo-name-area  { flex: 1; min-width: 0; }
+    .logo-brand-name {
+      font-size: clamp(1.3rem, 3vw, 2rem);
+      font-family: 'Space Grotesk', 'Montserrat', 'Inter', sans-serif;
+      font-weight: 700;
+      line-height: 1.1;
+      color: #c4b5fd;
+      letter-spacing: 0.08em;
+      word-break: break-word;
+    }
+    .logo-tagline {
+      font-size: 0.65rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      margin-top: 0.4rem;
+      color: rgba(167,139,250,0.45);
+    }
+
+    /* ── ALTERNATE LOGO PREVIEW (gradient text version) ───────────────────*/
+    .logo-alt-name {
+      font-size: clamp(1.5rem, 3vw, 2.2rem);
+      font-family: 'Montserrat', 'Space Grotesk', sans-serif;
+      font-weight: 900;
+    }
+
+    /* ── LOADING CARD STYLE ────────────────────────────────────────────────*/
+    .loading-card { border-color: rgba(255,255,255,0.04) !important; }
+
+    /* ── COLOR SWATCH CARD ─────────────────────────────────────────────────
+       Each color palette card is a colored rectangle with the hex code on it.
+       min-width: enough to show the hex code.
+       border-radius: rounded for a premium palette look.
+       transition: smooth hover scale + shadow effect. */
+    .color-swatch-card {
+      flex: 1;
+      min-width: 90px;
+      height: 80px;
+      border-radius: 0.875rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0.625rem;
+      border: 1px solid rgba(255,255,255,0.10);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .color-swatch-card:hover  { transform: scale(1.04); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+    .color-swatch-hex   { font-size: 0.65rem; font-weight: 700; font-family: 'Courier New', monospace; letter-spacing: 0.04em; }
+    .color-swatch-label { font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase; }
+
+    /* ── IDENTITY SECTION LABEL ────────────────────────────────────────────
+       Small uppercase label above each identity section (Color, Typography, etc.) */
+    .section-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(167,139,250,0.60);
+      margin-bottom: 0.75rem;
+    }
+
+    /* ── IDENTITY TEXT BLOCK ───────────────────────────────────────────────
+       The card that holds text identity sections (Typography, Icon Concept, etc.) */
+    .identity-block {
+      background: rgba(255,255,255,0.025);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 0.75rem;
+      padding: 1rem 1.125rem;
+    }
+
+    /* ── EXAMPLE CHIP HOVER ────────────────────────────────────────────────*/
+    .example-chip { transition: all 0.2s ease; }
+    .example-chip:hover {
+      background: rgba(139,92,246,0.12);
+      border-color: rgba(139,92,246,0.30);
+      color: #a78bfa;
+    }
+
+    /* ── SCROLLBAR ─────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar       { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0d1117; }
+    ::-webkit-scrollbar-thumb { background: #2a1a50; border-radius: 4px; }
+
+    html { scroll-behavior: smooth; }
+  </style>
+</head>
+
+
+<body class="mesh-bg min-h-screen">
+
+
+<!-- ==============================================================================
+     NAVIGATION BAR
+     ============================================================================== -->
+<nav class="navbar-glass fixed top-0 left-0 right-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+
+      <div class="flex items-center gap-4">
+
+        <a href="/" class="flex items-center gap-1.5 text-white/45 hover:text-white/85 transition-colors text-sm font-medium group" aria-label="Back to homepage">
+          <span class="group-hover:-translate-x-0.5 transition-transform inline-block">&#8592;</span>
+          <span class="hidden sm:inline">Back</span>
+        </a>
+
+        <div class="w-px h-5 bg-white/10" aria-hidden="true"></div>
+
+        <!-- Violet-tinted SVG chip logo -->
+        <a href="/" class="flex items-center gap-2" aria-label="EasyAIToolz Home">
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="navLgL" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#8b5cf6"/>
+                <stop offset="100%" stop-color="#6366f1"/>
+              </linearGradient>
+            </defs>
+            <rect x="2" y="2" width="28" height="28" rx="6" stroke="url(#navLgL)" stroke-width="1.5" fill="rgba(139,92,246,0.07)"/>
+            <rect x="9" y="9" width="14" height="14" rx="3" stroke="url(#navLgL)" stroke-width="1.2" fill="rgba(99,102,241,0.10)"/>
+            <line x1="11" y1="2"  x2="11" y2="5"  stroke="#8b5cf6" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="21" y1="2"  x2="21" y2="5"  stroke="#8b5cf6" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="11" y1="27" x2="11" y2="30" stroke="#8b5cf6" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="21" y1="27" x2="21" y2="30" stroke="#8b5cf6" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="2"  y1="11" x2="5"  y2="11" stroke="#6366f1" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="2"  y1="21" x2="5"  y2="21" stroke="#6366f1" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="27" y1="11" x2="30" y2="11" stroke="#6366f1" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="27" y1="21" x2="30" y2="21" stroke="#6366f1" stroke-width="1.2" stroke-linecap="round"/>
+            <circle cx="16" cy="16" r="2.2" fill="url(#navLgL)"/>
+          </svg>
+          <span class="text-[1rem] font-bold leading-none">
+            <span class="text-blue-400">Easy</span><span class="text-purple-400">AI</span><span class="text-pink-400">Toolz</span>
+          </span>
+        </a>
+      </div>
+
+      <span class="hidden sm:flex items-center gap-1.5 bg-violet-500/10 border border-violet-500/20 text-violet-400 text-xs font-semibold px-3 py-1 rounded-full">
+        &#10024; Logo Maker
+      </span>
+
+    </div>
+  </div>
+</nav>
+
+
+<!-- ==============================================================================
+     PAGE HEADER
+     ============================================================================== -->
+<header class="pt-28 pb-8 px-4 text-center">
+  <div class="max-w-2xl mx-auto">
+
+    <div class="flex items-center justify-center gap-2 text-xs text-white/28 mb-4">
+      <a href="/" class="hover:text-white/55 transition-colors">Home</a>
+      <span>&#8250;</span>
+      <span class="text-white/40">Creative Suite</span>
+      <span>&#8250;</span>
+      <span class="text-violet-400">Logo Maker</span>
+    </div>
+
+    <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight mb-3">
+      <span class="gradient-text">AI Logo</span>
+      <span class="text-white"> &amp; Brand Identity</span>
+    </h1>
+
+    <p class="text-white/50 text-base leading-relaxed max-w-lg mx-auto">
+      Enter your brand name and preferences &mdash; get a complete identity package:
+      logo concept, color palette, typography, and layout guide. Free, instant.
+    </p>
+
+  </div>
+</header>
+
+
+<!-- ==============================================================================
+     MAIN WORKSPACE — Two-column interactive layout
+
+     LAYOUT:
+       MOBILE  (< 1024px)  → 1 column, stacked vertically
+       DESKTOP (>= 1024px) → [380px fixed left] | [flexible right]
+
+     The right column needs more space here than other tools because it shows
+     a rich multi-section brand identity: preview + colors + typography + concept.
+     ============================================================================== -->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+  <div class="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 items-start">
+
+
+    <!-- ============================================================
+         LEFT COLUMN: INPUT PANEL
+         4 inputs: brand name text + 3 dropdowns + button
+         ============================================================ -->
+    <div class="flex flex-col gap-5">
+
+      <div class="bg-slate-900/60 border border-white/[.08] rounded-2xl p-6">
+
+        <h2 class="text-sm font-bold text-white mb-6 flex items-center gap-2">
+          <span class="w-7 h-7 rounded-lg bg-violet-500/15 flex items-center justify-center" aria-hidden="true">&#10024;</span>
+          Brand Details
+        </h2>
+
+
+        <!-- ── INPUT 1: BRAND NAME ────────────────────────────────────────
+             The most important field. This name will be:
+               - Rendered in the live CSS logo preview with the AI's colors
+               - Used to generate brand initials for the icon badge
+               - Passed to the AI as the "Brand Name" parameter
+             Examples: "RHA Store", "TechApex", "CloudBrew", "Zara", "FitFlow"
+        -->
+        <div class="mb-5">
+          <label for="brandNameInput" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            1. Brand Name
+          </label>
+          <input
+            type="text"
+            id="brandNameInput"
+            placeholder="e.g., RHA Store, TechApex, CloudBrew..."
+            class="input-field w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm placeholder-white/20 transition-colors font-medium"
+          />
+
+          <!-- Quick example chips -->
+          <div class="flex flex-wrap gap-1.5 mt-2.5">
+            <button onclick="document.getElementById('brandNameInput').value=this.innerText" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">RHA Store</button>
+            <button onclick="document.getElementById('brandNameInput').value=this.innerText" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">TechApex</button>
+            <button onclick="document.getElementById('brandNameInput').value=this.innerText" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">CloudBrew</button>
+            <button onclick="document.getElementById('brandNameInput').value=this.innerText" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">FitFlow</button>
+            <button onclick="document.getElementById('brandNameInput').value=this.innerText" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">NovaMart</button>
+          </div>
+          <p class="text-xs text-white/20 mt-2">
+            <kbd class="bg-white/5 border border-white/10 rounded px-1 py-0.5 font-mono text-xs">Ctrl</kbd>+
+            <kbd class="bg-white/5 border border-white/10 rounded px-1 py-0.5 font-mono text-xs">Enter</kbd> to generate
+          </p>
+        </div>
+
+
+        <!-- ── INPUT 2: NICHE / INDUSTRY ─────────────────────────────────
+             The AI uses this to understand what visual language the brand
+             needs to speak. Fitness brands use different symbols than cafes.
+             E.g., Tech → circuit elements, circuits, arrows
+                   Food → organic shapes, wheat, coffee beans
+                   Fitness → dynamic lines, human figure, lightning
+        -->
+        <div class="mb-5">
+          <label for="industrySelect" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            2. Niche / Industry
+          </label>
+          <select id="industrySelect" class="input-field custom-select w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm transition-colors appearance-none cursor-pointer">
+            <option value="E-commerce &amp; Fashion / Lifestyle">&#128722; E-commerce &amp; Fashion</option>
+            <option value="Tech &amp; Software / SaaS">&#128187; Tech &amp; Software / SaaS</option>
+            <option value="Food, Cafe &amp; Hospitality">&#9749; Food, Cafe &amp; Hospitality</option>
+            <option value="Fitness, Health &amp; Wellness">&#127947; Fitness, Health &amp; Wellness</option>
+            <option value="Education &amp; EdTech">&#127979; Education &amp; EdTech</option>
+            <option value="Finance &amp; Fintech">&#128200; Finance &amp; Fintech</option>
+            <option value="Creative Agency &amp; Media">&#127912; Creative Agency &amp; Media</option>
+            <option value="Beauty &amp; Cosmetics">&#128144; Beauty &amp; Cosmetics</option>
+          </select>
+        </div>
+
+
+        <!-- ── INPUT 3: DESIGN VIBE ───────────────────────────────────────
+             Controls the visual personality of the logo concept.
+             This affects: font weight, letter-spacing, shape complexity,
+             and overall aesthetic direction.
+
+             Vibe → CSS letter-spacing + font-weight (set in logo_logic.js):
+               Minimalist      → thin weight, wide letter-spacing, clean
+               Luxury/Premium  → thin weight, very wide spacing, small-caps
+               Bold/Modern     → heavy weight, tight spacing, strong
+               Retro/Vintage   → medium weight, slight spacing, textured
+        -->
+        <div class="mb-5">
+          <label for="vibeSelect" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            3. Design Vibe
+          </label>
+          <select id="vibeSelect" class="input-field custom-select w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm transition-colors appearance-none cursor-pointer">
+            <option value="Minimalist &amp; Clean">&#9651; Minimalist &amp; Clean</option>
+            <option value="Luxury / Premium">&#11835; Luxury / Premium</option>
+            <option value="Bold / Modern">&#9646; Bold / Modern</option>
+            <option value="Retro / Vintage">&#128262; Retro / Vintage</option>
+            <option value="Playful / Friendly">&#10024; Playful / Friendly</option>
+            <option value="Corporate / Professional">&#128188; Corporate / Professional</option>
+          </select>
+        </div>
+
+
+        <!-- ── INPUT 4: CORE COLOR VIBE ──────────────────────────────────
+             The AI uses this to guide its hex color choices.
+             The actual hex values come from the AI — this is just a preference.
+
+             Warm/Energetic   → oranges, reds, warm yellows, earth tones
+             Cool/Professional → blues, teals, steel grays, deep navies
+             Neutral/Elegant  → blacks, whites, golds, champagne, charcoal
+        -->
+        <div class="mb-7">
+          <label for="paletteSelect" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            4. Color Palette Preference
+          </label>
+          <select id="paletteSelect" class="input-field custom-select w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm transition-colors appearance-none cursor-pointer">
+            <option value="Warm &amp; Energetic (reds, oranges, warm tones)">&#128293; Warm &amp; Energetic</option>
+            <option value="Cool &amp; Professional (blues, teals, deep tones)">&#129405; Cool &amp; Professional</option>
+            <option value="Neutral &amp; Elegant (blacks, golds, champagne)">&#11088; Neutral &amp; Elegant</option>
+            <option value="Vibrant &amp; Bold (bright, high-contrast colors)">&#127752; Vibrant &amp; Bold</option>
+            <option value="Earthy &amp; Organic (greens, browns, terracotta)">&#127807; Earthy &amp; Organic</option>
+          </select>
+        </div>
+
+
+        <!-- ── GENERATE BUTTON ────────────────────────────────────────────
+             onclick="generateBrand()" calls the main JS function.
+             JS disables this button during the API call to prevent double-clicks.
+        -->
+        <button
+          id="generateBtn"
+          onclick="generateBrand()"
+          class="btn-generate w-full text-white font-bold py-4 rounded-xl text-base flex items-center justify-center gap-2.5 tracking-wide"
+        >
+          <span id="btnIcon" aria-hidden="true">&#10024;</span>
+          <span id="btnText">Generate Brand Concept</span>
+        </button>
+
+      </div><!-- end input card -->
+
+
+      <!-- What you'll get guide box -->
+      <div class="bg-violet-500/5 border border-violet-500/15 rounded-xl p-4">
+        <p class="text-xs font-bold text-violet-400/75 mb-3 uppercase tracking-widest">What You Get</p>
+        <ul class="text-xs text-white/35 space-y-2 leading-relaxed">
+          <li class="flex items-start gap-2"><span class="text-violet-500 mt-0.5">&#9670;</span><span><b class="text-white/45">Live Logo Preview</b> — Your brand name styled with AI colors</span></li>
+          <li class="flex items-start gap-2"><span class="text-violet-500 mt-0.5">&#9670;</span><span><b class="text-white/45">Color Palette</b> — 3 brand hex codes as clickable swatches</span></li>
+          <li class="flex items-start gap-2"><span class="text-violet-500 mt-0.5">&#9670;</span><span><b class="text-white/45">Typography Guide</b> — Primary + secondary font pairing</span></li>
+          <li class="flex items-start gap-2"><span class="text-violet-500 mt-0.5">&#9670;</span><span><b class="text-white/45">Icon Concept</b> — Symbol description to give your designer</span></li>
+          <li class="flex items-start gap-2"><span class="text-violet-500 mt-0.5">&#9670;</span><span><b class="text-white/45">Layout Guide</b> — How to arrange icon + text</span></li>
+        </ul>
+      </div>
+
+    </div><!-- end left column -->
+
+
+    <!-- ============================================================
+         RIGHT COLUMN: BRAND IDENTITY OUTPUT PANEL
+         lg:sticky lg:top-24 = stays in the viewport on desktop.
+
+         CONTENT (all rendered by JavaScript):
+           ┌────────────────────────────┐
+           │ [Panel title + copy btn]   │
+           │ [emptyState OR brandOutput]│
+           │   ├── Logo Preview Card    │
+           │   ├── Color Swatches       │
+           │   ├── Typography Block     │
+           │   ├── Icon Concept Block   │
+           │   └── Layout Guide Block   │
+           └────────────────────────────┘
+         ============================================================ -->
+    <div class="flex flex-col gap-4 lg:sticky lg:top-24">
+
+      <!-- Output container card -->
+      <div class="bg-slate-900/60 border border-white/[.08] rounded-2xl overflow-hidden">
+
+        <!-- Panel title bar -->
+        <div class="flex items-center justify-between px-5 py-4 border-b border-white/[.06]" style="background:rgba(255,255,255,0.025)">
+          <div class="flex items-center gap-2.5">
+            <span class="w-2 h-2 rounded-full bg-violet-500 animate-pulse" aria-hidden="true"></span>
+            <h2 class="text-sm font-semibold text-white/80">Brand Identity Mockup</h2>
+          </div>
+
+          <!-- COPY IDENTITY DATA BUTTON
+               Hidden until a brand concept is generated.
+               onclick="copyBrandData()" copies ALL identity data as clean text. -->
+          <button
+            id="copyBtn"
+            onclick="copyBrandData()"
+            class="hidden items-center gap-1.5 text-xs text-white/38 hover:text-violet-400 px-3 py-1.5 rounded-lg border border-white/[.08] hover:border-violet-500/30 transition-all"
+          >
+            <span>&#128203;</span>
+            <span>Copy Identity Data</span>
+          </button>
+        </div>
+
+
+        <!-- ── SCROLLABLE CONTENT AREA ─────────────────────────────────── -->
+        <div class="overflow-y-auto p-5" style="max-height: 78vh; min-height: 480px;">
+
+
+          <!-- ── EMPTY STATE ─────────────────────────────────────────────────
+               Shown before any brand is generated.
+               JavaScript hides this and shows brandOutput after the AI responds.
+          -->
+          <div id="emptyState" class="flex flex-col items-center justify-center gap-6 py-14 text-center">
+
+            <!-- Large icon -->
+            <div class="relative">
+              <div class="w-20 h-20 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-4xl">
+                &#10024;
+              </div>
+              <span class="absolute -top-2 -right-2 text-base" aria-hidden="true">&#9671;</span>
+            </div>
+
+            <div>
+              <p class="text-white/50 font-semibold mb-1.5">Your brand identity will appear here</p>
+              <p class="text-white/25 text-sm max-w-xs leading-relaxed">
+                Enter your brand details on the left and click
+                <span class="text-violet-400/70 font-medium">Generate Brand Concept</span>
+              </p>
+            </div>
+
+            <!-- Skeleton preview of what the output looks like -->
+            <div class="w-full max-w-sm space-y-3 opacity-20 pointer-events-none select-none">
+
+              <!-- Logo preview skeleton -->
+              <div class="logo-preview-card">
+                <div class="logo-icon-badge loading-badge"></div>
+                <div class="flex-1 space-y-2">
+                  <div class="h-5 bg-white/10 rounded-lg w-3/4"></div>
+                  <div class="h-2 bg-white/6 rounded-full w-1/3"></div>
+                </div>
+              </div>
+
+              <!-- Color swatch skeleton -->
+              <div class="flex gap-2">
+                <div class="color-swatch-card" style="background:rgba(139,92,246,0.25);"></div>
+                <div class="color-swatch-card" style="background:rgba(99,102,241,0.20);"></div>
+                <div class="color-swatch-card" style="background:rgba(124,58,237,0.15);"></div>
+              </div>
+
+              <!-- Text blocks skeleton -->
+              <div class="identity-block space-y-2">
+                <div class="h-2.5 bg-white/8 rounded-full w-full"></div>
+                <div class="h-2.5 bg-white/6 rounded-full w-4/5"></div>
+              </div>
+
+            </div><!-- end skeleton preview -->
+
+          </div><!-- end emptyState -->
+
+
+          <!-- ── BRAND OUTPUT ─────────────────────────────────────────────────
+               Hidden initially. JavaScript removes "hidden" and fills this div
+               with renderBrandIdentity() output.
+
+               SECTIONS RENDERED BY JS:
+                 1. Live Logo Preview (CSS-styled brand name card)
+                 2. Color Palette (3 clickable hex swatch cards)
+                 3. Typography (font pairing recommendation)
+                 4. Icon Concept (symbol description)
+                 5. Layout Guide (how to arrange elements)
+          -->
+          <div id="brandOutput" class="hidden">
+            <!-- All content filled by JavaScript renderBrandIdentity() -->
+          </div>
+
+        </div><!-- end scrollable area -->
+
+      </div><!-- end output card -->
+
+    </div><!-- end right column -->
+
+  </div><!-- end two-column grid -->
+</main>
+
+
+<!-- ==============================================================================
+     FOOTER
+     ============================================================================== -->
+<footer class="border-t border-white/[.05] py-6">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+      <span class="text-sm font-bold">
+        <span class="text-blue-400">Easy</span><span class="text-purple-400">AI</span><span class="text-pink-400">Toolz</span>
+        <span class="text-white/18 font-normal text-xs ml-2">&mdash; Creative Suite</span>
+      </span>
+      <div class="flex items-center gap-3 text-xs text-white/22">
+        <a href="/creative/meme-generator.html" class="hover:text-white/55 transition-colors">&#8592; Meme Generator</a>
+        <span>|</span>
+        <a href="/" class="hover:text-white/55 transition-colors">All Tools &#8594;</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+<!-- ==============================================================================
+     JAVASCRIPT — logo_logic.js embedded here at build time.
+     Placed at the bottom of <body> so all HTML elements exist when JS runs.
+     ============================================================================== -->
+<script>
+// ============================================================
+// logo_logic.js
+// JavaScript for the AI Logo Maker & Brand Identity Builder
+// Built into logo-maker.html at build time
+// ============================================================
+
+
+// ─── FUNCTION 1: generateBrand ───────────────────────────────────────────────
+// The main function. Runs when the user clicks "Generate Brand Concept ✨".
+//
+// FULL DATA FLOW:
+//   Step 1: Read brand name + 3 dropdown values
+//   Step 2: Validate — brand name is required
+//   Step 3: Build the AI system prompt
+//   Step 4: Show loading state with animated live preview
+//   Step 5: POST to /api/generate (our secure backend)
+//   Step 6: Wait for the AI response
+//   Step 7: Parse the structured response into brand data
+//   Step 8: Render the full brand identity: preview + colors + fonts + concept
+//   Step 9: Reset the button
+async function generateBrand() {
+
+  // ── STEP 1: Read all inputs ──────────────────────────────────────────────
+  var brandName = document.getElementById('brandNameInput').value.trim();
+  var industry  = document.getElementById('industrySelect').value;
+  var vibe      = document.getElementById('vibeSelect').value;
+  var palette   = document.getElementById('paletteSelect').value;
+
+  // ── STEP 2: Validate ─────────────────────────────────────────────────────
+  if (!brandName) {
+    var input = document.getElementById('brandNameInput');
+    input.style.borderColor = 'rgba(251,191,36,0.7)';
+    input.placeholder = 'Brand name is required ✦';
+    setTimeout(function() {
+      input.style.borderColor = '';
+      input.placeholder = 'e.g., RHA Store, TechApex, CloudBrew...';
+    }, 2500);
+    return;
+  }
+
+  // ── STEP 3: Build the AI System Prompt ──────────────────────────────────
+  // We give the AI a STRICT pipe-separated output format so our parser
+  // can reliably extract each component.
+  //
+  // Expected output from AI (EXACTLY this format):
+  //   "Icon Concept: [text] | Colors: [hex1, hex2, hex3] | Typography: [text] | Layout: [text]"
+  var systemPrompt =
+    'You are an elite brand identity designer and creative director with 20 years of experience at top agencies. ' +
+    'Create a comprehensive logo concept for:\n' +
+    '- Brand Name: ' + brandName + '\n' +
+    '- Industry / Niche: ' + industry + '\n' +
+    '- Design Vibe: ' + vibe + '\n' +
+    '- Color Palette Preference: ' + palette + '\n\n' +
+    'STRICT OUTPUT FORMAT — return EXACTLY this one line, nothing else:\n' +
+    'Icon Concept: [Describe the logo symbol in 1-2 sentences: shape, meaning, style] | ' +
+    'Colors: [List exactly 3 hex color codes separated by commas, e.g. #1A1A2E, #E94560, #FFFFFF] | ' +
+    'Typography: [Primary font name (style description) + Secondary font name (style description)] | ' +
+    'Layout: [How to arrange the icon and text: stacked/horizontal/icon-only, and why]\n\n' +
+    'Requirements:\n' +
+    '1. Colors MUST match the ' + palette + ' palette preference\n' +
+    '2. Design style MUST match the ' + vibe + ' vibe\n' +
+    '3. The concept must feel authentic to the ' + industry + ' industry\n' +
+    '4. Use real, available Google Fonts names for typography\n' +
+    '5. Output ONLY the formatted line. No intro, no outro, no extra text.';
+
+  // ── STEP 4: Set Loading State ────────────────────────────────────────────
+  var btn     = document.getElementById('generateBtn');
+  var btnText = document.getElementById('btnText');
+  var btnIcon = document.getElementById('btnIcon');
+  var copyBtn = document.getElementById('copyBtn');
+
+  btn.disabled        = true;
+  btnText.textContent = 'Designing...';
+  btnIcon.innerHTML   = '<span class="spinner"></span>';
+  copyBtn.classList.add('hidden');
+
+  // Show an animated loading preview with the brand name already visible.
+  // This gives instant visual feedback — the user sees their name on screen.
+  renderLoadingPreview(brandName, vibe);
+
+  // ── STEP 5 + 6: POST to backend and await ────────────────────────────────
+  try {
+
+    var response = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: systemPrompt })
+    });
+
+    var data = await response.json();
+
+    // ── STEP 7 + 8: Parse and render ──────────────────────────────────────
+    if (data.result) {
+      var parsed = parseBrandResponse(data.result.trim());
+      renderBrandIdentity(parsed, brandName, vibe);
+      copyBtn.classList.remove('hidden');
+    } else {
+      renderError('AI Error: ' + (data.error || 'Unknown error. Please try again.'));
+    }
+
+  } catch(err) { console.error(err); }
+
+  // ── STEP 9: Reset button ─────────────────────────────────────────────────
+  btn.disabled        = false;
+  btnText.textContent = 'Generate Brand Concept';
+  btnIcon.textContent = '\u2728'; // ✨
+}
+
+
+// ─── FUNCTION 2: parseBrandResponse ──────────────────────────────────────────
+// Parses the AI's pipe-separated response string into a usable data object.
+//
+// EXPECTED INPUT:
+//   "Icon Concept: A sleek shield... | Colors: #1A1A2E, #E94560, #FFFFFF | Typography: Montserrat (bold)... | Layout: Horizontal..."
+//
+// OUTPUT (JavaScript object):
+//   {
+//     iconConcept: "A sleek shield...",
+//     colors: ["#1A1A2E", "#E94560", "#FFFFFF"],
+//     typography: "Montserrat (bold)...",
+//     layout: "Horizontal...",
+//     raw: "full original string"
+//   }
+function parseBrandResponse(rawText) {
+
+  // Default values if parsing fails
+  var result = {
+    iconConcept: 'A unique symbol reflecting your brand identity.',
+    colors:      ['#6366f1', '#ec4899', '#1e1b4b'],
+    typography:  'Inter (Primary) + Manrope (Body)',
+    layout:      'Icon left, brand name right — horizontal layout.',
+    raw:         rawText
+  };
+
+  // Split by pipe separator
+  var parts = rawText.split(/\s*\|\s*/);
+
+  parts.forEach(function(part) {
+    var part = part.trim();
+
+    if (/^icon\s*concept\s*:/i.test(part)) {
+      result.iconConcept = part.replace(/^icon\s*concept\s*:\s*/i, '').trim();
+    }
+    else if (/^colors?\s*:/i.test(part)) {
+      var colorStr = part.replace(/^colors?\s*:\s*/i, '').trim();
+      // Extract ALL hex codes from the string using a regex.
+      // Regex: # followed by exactly 6 hex characters (0-9, A-F, a-f)
+      var hexMatches = colorStr.match(/#[0-9A-Fa-f]{6}/g);
+      // Also try 3-digit hex codes
+      if (!hexMatches) hexMatches = colorStr.match(/#[0-9A-Fa-f]{3}/g);
+      if (hexMatches && hexMatches.length > 0) {
+        result.colors = hexMatches;
+      }
+    }
+    else if (/^typography\s*:/i.test(part)) {
+      result.typography = part.replace(/^typography\s*:\s*/i, '').trim();
+    }
+    else if (/^layout\s*:/i.test(part)) {
+      result.layout = part.replace(/^layout\s*:\s*/i, '').trim();
+    }
+  });
+
+  return result;
+}
+
+
+// ─── FUNCTION 3: renderBrandIdentity ─────────────────────────────────────────
+// Takes the parsed brand data and renders the full identity on the right panel.
+//
+// RENDERS:
+//   1. A live CSS logo preview (brand name styled with AI-suggested colors)
+//   2. Color palette swatch cards (each hex color as a clickable card)
+//   3. Typography recommendation block
+//   4. Icon concept description
+//   5. Layout guide block
+//
+// Parameters:
+//   parsed    — object from parseBrandResponse()
+//   brandName — original brand name (for the live preview)
+//   vibe      — design vibe (controls logo preview CSS style)
+function renderBrandIdentity(parsed, brandName, vibe) {
+
+  // Store full data for copy function
+  window._currentBrandData = { parsed: parsed, brandName: brandName, vibe: vibe };
+
+  var container = document.getElementById('brandOutput');
+
+  // ── 1. Determine preview style based on vibe ─────────────────────────────
+  // We use the first 2 colors from the AI response to style the logo preview.
+  // Fallback colors if AI didn't return valid hex codes.
+  var primaryColor   = parsed.colors[0] || '#6366f1';
+  var secondaryColor = parsed.colors[1] || '#ec4899';
+  var bgColor        = parsed.colors[2] || '#0f0f1a';
+
+  // Generate the initials (first letter of each word) for the icon badge
+  var initials = brandName.split(/\s+/).map(function(w) { return w[0]; }).join('').toUpperCase().slice(0,2);
+
+  // ── Vibe-based CSS class for the logo preview box ───────────────────────
+  // These are inline style objects that get applied to the preview container.
+  var vibeStyles = {
+    'Minimalist & Clean':          'letter-spacing:0.15em; font-weight:300;',
+    'Luxury / Premium':            'letter-spacing:0.25em; font-weight:200; font-variant:small-caps;',
+    'Bold / Modern':               'letter-spacing:0.02em; font-weight:900;',
+    'Retro / Vintage':             'letter-spacing:0.08em; font-weight:700;',
+    'Playful / Friendly':          'letter-spacing:0.05em; font-weight:800;',
+    'Corporate / Professional':    'letter-spacing:0.10em; font-weight:600;'
+  };
+  var letterStyle = vibeStyles[vibe] || 'letter-spacing:0.08em; font-weight:700;';
+
+  // ── 2. Build the HTML for the entire brand output section ────────────────
+  container.innerHTML =
+
+    // ── SECTION A: Live Logo Preview ───────────────────────────────────────
+    // This is the centerpiece — the brand name rendered as a live CSS logo.
+    // It uses the AI's colors and vibe to style itself dynamically.
+    '<div class="mb-6">' +
+      '<p class="section-label">&#127775; Live Logo Preview</p>' +
+
+      // The preview card itself: background uses the third AI color (or dark)
+      '<div class="logo-preview-card" style="background:' + bgColor + ';">' +
+
+        // The icon badge: a colored circle with the brand initials
+        // primaryColor = background, secondaryColor = text
+        '<div class="logo-icon-badge" style="background:linear-gradient(135deg,' + primaryColor + ',' + secondaryColor + ');">' +
+          '<span class="font-black text-white text-lg tracking-tight select-none">' + escapeHTML(initials) + '</span>' +
+        '</div>' +
+
+        // The brand name rendered in the AI's suggested style
+        '<div class="logo-name-area">' +
+          '<h3 class="logo-brand-name" style="color:' + primaryColor + '; ' + letterStyle + '">' +
+            escapeHTML(brandName.toUpperCase()) +
+          '</h3>' +
+          // Tagline placeholder — shows the industry as a subtle subtext
+          '<p class="logo-tagline" style="color:' + secondaryColor + ';">' +
+            escapeHTML(vibe.split('/')[0].trim().toLowerCase()) +
+          '</p>' +
+        '</div>' +
+
+        // Second preview: full dark card with gradient text effect
+        '<div class="mt-4 pt-4 border-t border-white/8 text-center">' +
+          '<span class="logo-alt-name" style="background:linear-gradient(135deg,' + primaryColor + ',' + secondaryColor + ');-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;' + letterStyle + '">' +
+            escapeHTML(brandName.toUpperCase()) +
+          '</span>' +
+        '</div>' +
+
+      '</div>' + // end logo-preview-card
+    '</div>' + // end section A
+
+    // ── SECTION B: Color Palette Cards ─────────────────────────────────────
+    // Each hex color from the AI is rendered as a colored swatch card.
+    // Clicking the hex code copies it to clipboard.
+    '<div class="mb-6">' +
+      '<p class="section-label">&#127912; Color Palette</p>' +
+      '<div class="flex gap-3 flex-wrap">' +
+        parsed.colors.map(function(hex, idx) {
+          var labels = ['Primary', 'Secondary', 'Accent'];
+          var label  = labels[idx] || ('Color ' + (idx + 1));
+          // isDark function: estimate if bg is dark → choose white or black text
+          var textColor = isDarkColor(hex) ? '#ffffff' : '#000000';
+          return '<div onclick="copyHex(\'' + escapeAttr(hex) + '\')" title="Click to copy" ' +
+                 'class="color-swatch-card cursor-pointer group" ' +
+                 'style="background:' + hex + ';">' +
+                   '<span class="color-swatch-hex" style="color:' + textColor + '; opacity:0.7;">' + escapeHTML(hex) + '</span>' +
+                   '<span class="color-swatch-label" style="color:' + textColor + '; opacity:0.5;">' + label + '</span>' +
+                 '</div>';
+        }).join('') +
+      '</div>' +
+    '</div>' + // end section B
+
+    // ── SECTION C: Typography ───────────────────────────────────────────────
+    '<div class="mb-6">' +
+      '<p class="section-label">&#9998; Typography</p>' +
+      '<div class="identity-block">' +
+        '<p class="text-sm text-white/70 leading-relaxed">' + escapeHTML(parsed.typography) + '</p>' +
+        // Try to extract the first font name and show a preview text
+        '<div class="mt-3 pt-3 border-t border-white/6">' +
+          '<p class="text-xl font-light text-white/30 tracking-widest">' + escapeHTML(brandName) + '</p>' +
+          '<p class="text-xs text-white/20 mt-1">Suggested Font Preview (system fallback)</p>' +
+        '</div>' +
+      '</div>' +
+    '</div>' + // end section C
+
+    // ── SECTION D: Icon / Symbol Concept ───────────────────────────────────
+    '<div class="mb-6">' +
+      '<p class="section-label">&#128161; Icon / Symbol Concept</p>' +
+      '<div class="identity-block">' +
+        '<p class="text-sm text-white/70 leading-relaxed">' + escapeHTML(parsed.iconConcept) + '</p>' +
+      '</div>' +
+    '</div>' + // end section D
+
+    // ── SECTION E: Layout Guide ─────────────────────────────────────────────
+    '<div class="mb-2">' +
+      '<p class="section-label">&#128204; Layout Guide</p>' +
+      '<div class="identity-block">' +
+        '<p class="text-sm text-white/70 leading-relaxed">' + escapeHTML(parsed.layout) + '</p>' +
+      '</div>' +
+    '</div>';
+
+  // Show the output section (it starts hidden)
+  document.getElementById('emptyState').classList.add('hidden');
+  container.classList.remove('hidden');
+}
+
+
+// ─── FUNCTION 4: renderLoadingPreview ────────────────────────────────────────
+// Shows a loading animation with the brand name already visible.
+// This gives immediate visual feedback while the API call runs.
+function renderLoadingPreview(brandName, vibe) {
+  document.getElementById('emptyState').classList.add('hidden');
+  var container = document.getElementById('brandOutput');
+  container.classList.remove('hidden');
+
+  container.innerHTML =
+    '<div class="flex flex-col items-center gap-5 py-10 text-center">' +
+      // Show the brand name in an animated preview box
+      '<div class="logo-preview-card loading-card">' +
+        '<div class="logo-icon-badge loading-badge">' +
+          '<span class="font-black text-white/40 text-xl">' +
+            escapeHTML(brandName.split(/\s+/).map(function(w) { return w[0]; }).join('').toUpperCase().slice(0,2)) +
+          '</span>' +
+        '</div>' +
+        '<div class="logo-name-area">' +
+          '<h3 class="logo-brand-name text-white/30 tracking-widest">' + escapeHTML(brandName.toUpperCase()) + '</h3>' +
+          '<p class="logo-tagline text-white/15">analyzing brand parameters...</p>' +
+        '</div>' +
+      '</div>' +
+      // Loading indicator
+      '<div class="flex flex-col items-center gap-3">' +
+        '<div class="flex gap-2 items-center">' +
+          '<div class="w-2 h-2 rounded-full bg-violet-500/70 animate-bounce" style="animation-delay:0ms"></div>' +
+          '<div class="w-2 h-2 rounded-full bg-purple-500/70 animate-bounce" style="animation-delay:150ms"></div>' +
+          '<div class="w-2 h-2 rounded-full bg-fuchsia-500/70 animate-bounce" style="animation-delay:300ms"></div>' +
+        '</div>' +
+        '<p class="text-white/35 text-sm">Building your brand identity...</p>' +
+      '</div>' +
+    '</div>';
+}
+
+
+// ─── FUNCTION 5: renderError ─────────────────────────────────────────────────
+// Shows an error in the output panel.
+function renderError(message) {
+  document.getElementById('emptyState').classList.add('hidden');
+  var container = document.getElementById('brandOutput');
+  container.classList.remove('hidden');
+  container.innerHTML =
+    '<div class="flex flex-col gap-3 p-2">' +
+      '<div class="flex items-center gap-2 text-red-400">' +
+        '<span>&#9888;</span><span class="font-semibold text-sm">Something went wrong</span>' +
+      '</div>' +
+      '<pre class="text-xs text-white/40 whitespace-pre-wrap leading-relaxed">' + escapeHTML(message) + '</pre>' +
+      '<button onclick="generateBrand()" class="self-start text-xs bg-white/5 hover:bg-white/10 border border-white/10 text-white/50 px-4 py-2 rounded-lg transition-colors">Try Again</button>' +
+    '</div>';
+}
+
+
+// ─── FUNCTION 6: copyBrandData ────────────────────────────────────────────────
+// Copies the complete brand identity data to the clipboard.
+async function copyBrandData() {
+  var d = window._currentBrandData;
+  if (!d) return;
+
+  var text =
+    'Brand Name: ' + d.brandName + '\n' +
+    'Design Vibe: ' + d.vibe + '\n\n' +
+    'ICON CONCEPT:\n' + d.parsed.iconConcept + '\n\n' +
+    'COLOR PALETTE:\n' + d.parsed.colors.join(', ') + '\n\n' +
+    'TYPOGRAPHY:\n' + d.parsed.typography + '\n\n' +
+    'LAYOUT GUIDE:\n' + d.parsed.layout;
+
+  try {
+    await navigator.clipboard.writeText(text);
+
+    var btn = document.getElementById('copyBtn');
+    var orig = btn.innerHTML;
+    btn.innerHTML = '<span>\u2713</span><span>Copied!</span>';
+    btn.classList.add('text-violet-400');
+    setTimeout(function() {
+      btn.innerHTML = orig;
+      btn.classList.remove('text-violet-400');
+    }, 2000);
+  } catch (e) {
+    // Select the output panel as fallback
+    var range = document.createRange();
+    range.selectNode(document.getElementById('brandOutput'));
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+  }
+}
+
+
+// ─── FUNCTION 7: copyHex ─────────────────────────────────────────────────────
+// Copies a single hex color code when the user clicks a color swatch.
+async function copyHex(hex) {
+  try {
+    await navigator.clipboard.writeText(hex);
+    // Find the swatch that was clicked and flash it
+    var swatches = document.querySelectorAll('.color-swatch-card');
+    swatches.forEach(function(sw) {
+      if (sw.style.background === hex || sw.querySelector('.color-swatch-hex').textContent === hex) {
+        sw.style.outline = '2px solid rgba(255,255,255,0.5)';
+        setTimeout(function() { sw.style.outline = ''; }, 1200);
+      }
+    });
+  } catch (e) { /* Silent fail — clipboard not available */ }
+}
+
+
+// ─── HELPER: isDarkColor ─────────────────────────────────────────────────────
+// Given a hex color string, determines if it's "dark" (returns true) or "light".
+// Used to decide whether to use white or black text on top of the color swatch.
+//
+// HOW IT WORKS:
+//   We convert the hex to RGB values (0-255 each).
+//   We then calculate "luminance" — a weighted average of R, G, B.
+//   The human eye perceives green as brighter, red as medium, blue as darker.
+//   If luminance < 128, the color is dark → use white text.
+function isDarkColor(hex) {
+  var clean = hex.replace('#', '');
+  if (clean.length === 3) {
+    clean = clean[0]+clean[0]+clean[1]+clean[1]+clean[2]+clean[2];
+  }
+  if (clean.length !== 6) return true; // default to dark
+  var r = parseInt(clean.slice(0, 2), 16);
+  var g = parseInt(clean.slice(2, 4), 16);
+  var b = parseInt(clean.slice(4, 6), 16);
+  // Standard luminance formula (WCAG relative luminance approximation)
+  var luminance = (0.299 * r + 0.587 * g + 0.114 * b);
+  return luminance < 145; // values below 145 are considered "dark"
+}
+
+
+// ─── HELPER: escapeHTML ───────────────────────────────────────────────────────
+// Prevents XSS by converting HTML special characters to safe text entities.
+function escapeHTML(str) {
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(String(str)));
+  return div.innerHTML;
+}
+
+// ─── HELPER: escapeAttr ──────────────────────────────────────────────────────
+// Escapes a string for safe use inside an HTML attribute value (onclick="...").
+function escapeAttr(str) {
+  return String(str).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+}
+
+
+// ─── KEYBOARD SHORTCUT ────────────────────────────────────────────────────────
+// Ctrl+Enter / Cmd+Enter triggers brand generation from the name input field.
+document.getElementById('brandNameInput').addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    generateBrand();
+  }
+});
+
+</script>
+
+<script src="/assets/js/antigravity-core.js"></script>
+</body>
+</html>

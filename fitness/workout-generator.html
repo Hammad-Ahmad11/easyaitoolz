@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<!--
+  FILE     : /fitness/workout-generator.html
+  WEBSITE  : easyaitoolz.com
+  PURPOSE  : AI Workout Plan Generator — Health & Fitness Suite
+  TECH     : HTML5 + Tailwind CSS CDN + Vanilla JavaScript
+
+  HOW THIS TOOL WORKS:
+  =====================
+  1. User selects their Fitness Goal, Experience Level, Equipment, and Days/Week
+  2. User clicks "Generate My Plan"
+  3. JavaScript builds a detailed AI prompt from those 4 values
+  4. A POST request goes to /api/generate (our secure Cloudflare backend)
+  5. The backend calls Google Gemini (API key is hidden server-side — never exposed)
+  6. The AI response is parsed by day ("DAY 1:", "DAY 2:", etc.)
+  7. Each day is rendered as a beautiful expandable card on the right panel
+-->
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Workout Plan Generator &mdash; EasyAIToolz</title>
+  <meta name="description" content="Get a free personalized weekly workout plan built by AI. Choose your goal, level, equipment, and schedule. No signup needed." />
+
+  <!-- Google Fonts: Inter for UI, same as the homepage -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN — gives us utility classes like bg-slate-900, text-emerald-400 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'ui-sans-serif'] }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* ── BASE ─────────────────────────────────────────────────────────────────
+       Exact same dark base as the homepage for design consistency. */
+    body {
+      background-color: #06080f;
+      font-family: 'Inter', sans-serif;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+
+    /* ── MESH GRADIENT BACKGROUND ─────────────────────────────────────────────
+       Three layered radial gradients — same aurora effect as the homepage.
+       Green-tinted to match the Health & Fitness suite color theme. */
+    .mesh-bg {
+      background-color: #06080f;
+      background-image:
+        radial-gradient(ellipse 70% 50% at 10% 20%, rgba(16,185,129,.10) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 85% 15%, rgba(52,211,153,.08) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 30% at 50% 85%, rgba(56,100,255,.06) 0%, transparent 50%);
+    }
+
+    /* ── FROSTED GLASS NAVBAR ────────────────────────────────────────────────
+       Blurs content behind the navbar — same as all pages on this site. */
+    .navbar-glass {
+      background: rgba(6, 8, 15, 0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+
+    /* ── GRADIENT TEXT ───────────────────────────────────────────────────────
+       Clips a green-to-blue gradient to text.
+       Health suite uses emerald-to-blue instead of blue-to-purple. */
+    .gradient-text {
+      background: linear-gradient(135deg, #34d399 0%, #60a5fa 70%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── INPUT FIELDS ────────────────────────────────────────────────────────
+       Emerald glow ring on focus — matches the green health theme. */
+    .input-field:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.35);
+      border-color: rgba(52, 211, 153, 0.45);
+    }
+
+    /* ── DROPDOWN ARROW ──────────────────────────────────────────────────────
+       Custom SVG arrow replaces the browser's default dropdown icon.
+       background-image adds the small arrow on the right side. */
+    .custom-select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2310b981' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 40px;
+    }
+
+    /* ── GENERATE BUTTON ────────────────────────────────────────────────────
+       Green gradient button with a soft glow shadow.
+       Lifts slightly on hover (translateY -1px). */
+    .btn-generate {
+      background: linear-gradient(135deg, #059669, #10b981, #34d399);
+      background-size: 200% 200%;
+      transition: background-position 0.4s ease, opacity 0.2s ease, transform 0.2s ease;
+      box-shadow: 0 4px 20px rgba(16, 185, 129, 0.30);
+    }
+    .btn-generate:hover:not(:disabled)  { background-position: right center; transform: translateY(-1px); }
+    .btn-generate:disabled              { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── SPINNER ─────────────────────────────────────────────────────────────
+       Simple CSS rotating ring for the loading state. */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 17px; height: 17px;
+      border: 2px solid rgba(255,255,255,.20);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    /* ── CARD HOVER EFFECT ────────────────────────────────────────────────── */
+    .day-card { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+    .day-card:hover { box-shadow: 0 0 0 1px rgba(16,185,129,0.25); }
+
+    /* ── SCROLLBAR ───────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar       { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0d1117; }
+    ::-webkit-scrollbar-thumb { background: #1a3a2a; border-radius: 4px; }
+
+    html { scroll-behavior: smooth; }
+  </style>
+</head>
+
+
+<body class="mesh-bg min-h-screen">
+
+<!-- ==============================================================================
+     NAVIGATION BAR
+     Fixed at the top. Identical structure to every other page on the site.
+     Contains: [Back Button] [Divider] [Brand Logo]      [Tool Badge]
+     ============================================================================== -->
+<nav class="navbar-glass fixed top-0 left-0 right-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+
+      <!-- LEFT: Back button + thin divider + logo -->
+      <div class="flex items-center gap-4">
+
+        <!-- &#8592; = HTML entity for ← left arrow -->
+        <a href="/" class="flex items-center gap-1.5 text-white/45 hover:text-white/85 transition-colors text-sm font-medium group" aria-label="Back to homepage">
+          <span class="group-hover:-translate-x-0.5 transition-transform inline-block">&#8592;</span>
+          <span class="hidden sm:inline">Back</span>
+        </a>
+
+        <div class="w-px h-5 bg-white/10" aria-hidden="true"></div>
+
+        <!-- Brand logo — same inline SVG chip as the homepage -->
+        <a href="/" class="flex items-center gap-2" aria-label="EasyAIToolz Home">
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="navLg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#34d399"/>
+                <stop offset="100%" stop-color="#60a5fa"/>
+              </linearGradient>
+            </defs>
+            <rect x="2" y="2" width="28" height="28" rx="6" stroke="url(#navLg)" stroke-width="1.5" fill="rgba(52,211,153,0.07)"/>
+            <rect x="9" y="9" width="14" height="14" rx="3" stroke="url(#navLg)" stroke-width="1.2" fill="rgba(96,165,250,0.10)"/>
+            <line x1="11" y1="2"  x2="11" y2="5"  stroke="#34d399" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="21" y1="2"  x2="21" y2="5"  stroke="#34d399" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="11" y1="27" x2="11" y2="30" stroke="#34d399" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="21" y1="27" x2="21" y2="30" stroke="#34d399" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="2"  y1="11" x2="5"  y2="11" stroke="#60a5fa" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="2"  y1="21" x2="5"  y2="21" stroke="#60a5fa" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="27" y1="11" x2="30" y2="11" stroke="#60a5fa" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="27" y1="21" x2="30" y2="21" stroke="#60a5fa" stroke-width="1.2" stroke-linecap="round"/>
+            <circle cx="16" cy="16" r="2.2" fill="url(#navLg)"/>
+          </svg>
+          <span class="text-[1rem] font-bold leading-none">
+            <span class="text-blue-400">Easy</span><span class="text-purple-400">AI</span><span class="text-pink-400">Toolz</span>
+          </span>
+        </a>
+      </div>
+
+      <!-- RIGHT: Tool category badge -->
+      <span class="hidden sm:flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold px-3 py-1 rounded-full">
+        &#127947; Workout Generator
+      </span>
+
+    </div>
+  </div>
+</nav>
+
+
+<!-- ==============================================================================
+     PAGE HEADER
+     Short intro section below the navbar.
+     pt-28 = top padding so the content clears the 64px fixed navbar.
+     ============================================================================== -->
+<header class="pt-28 pb-8 px-4 text-center">
+  <div class="max-w-2xl mx-auto">
+
+    <!-- Breadcrumb navigation trail -->
+    <div class="flex items-center justify-center gap-2 text-xs text-white/28 mb-4">
+      <a href="/" class="hover:text-white/55 transition-colors">Home</a>
+      <span>&#8250;</span>
+      <span class="text-white/40">Health &amp; Fitness</span>
+      <span>&#8250;</span>
+      <span class="text-emerald-400">Workout Generator</span>
+    </div>
+
+    <!-- Main h1 heading — most important element for SEO -->
+    <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight mb-3">
+      <span class="gradient-text">AI Workout</span>
+      <span class="text-white"> Plan Generator</span>
+    </h1>
+
+    <p class="text-white/50 text-base leading-relaxed max-w-lg mx-auto">
+      Tell us your goal, level, and schedule &mdash; get a complete structured
+      week-by-week training plan built by AI. Free, instant, personalized.
+    </p>
+
+  </div>
+</header>
+
+
+<!-- ==============================================================================
+     MAIN WORKSPACE — The two-column interactive tool
+     ==============================================================================
+
+  LAYOUT EXPLAINED:
+  ─────────────────
+  On DESKTOP (lg = screens wider than 1024px):
+    The content splits into TWO equal columns side by side:
+      LEFT  = Input panel (your fitness details)
+      RIGHT = Output panel (the generated workout plan)
+
+  On MOBILE (screens narrower than 1024px):
+    Both columns stack vertically (left panel on top, right panel below)
+
+  CSS classes:
+    grid grid-cols-1        → 1 column on mobile
+    lg:grid-cols-[400px_1fr]→ fixed 400px left, remaining space for right on desktop
+    gap-6                   → 24px gap between columns
+    items-start             → both columns anchor to the top
+-->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+  <div class="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6 items-start">
+
+
+    <!-- ============================================================
+         LEFT COLUMN: INPUT PANEL
+         ============================================================ -->
+    <div class="flex flex-col gap-5">
+
+      <!-- Main input card — dark semi-transparent container -->
+      <div class="bg-slate-900/60 border border-white/[.08] rounded-2xl p-6">
+
+        <h2 class="text-sm font-bold text-white mb-6 flex items-center gap-2">
+          <span class="w-7 h-7 rounded-lg bg-emerald-500/15 flex items-center justify-center" aria-hidden="true">&#9881;</span>
+          Your Fitness Details
+        </h2>
+
+
+        <!-- ── DROPDOWN 1: FITNESS GOAL ─────────────────────────────────────
+             What result does the user want from their training?
+             This becomes the primary directive in the AI system prompt.
+        -->
+        <div class="mb-5">
+          <label for="goalSelect" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            1. Fitness Goal
+          </label>
+          <select id="goalSelect" class="input-field custom-select w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm transition-colors appearance-none cursor-pointer">
+            <option value="Muscle Gain (Hypertrophy)">&#128170; Muscle Gain</option>
+            <option value="Weight Loss &amp; Fat Burn">&#128293; Weight Loss &amp; Fat Burn</option>
+            <option value="Endurance &amp; Cardio Fitness">&#127939; Endurance &amp; Cardio</option>
+            <option value="General Health &amp; Fitness">&#129505; General Health &amp; Fitness</option>
+            <option value="Strength &amp; Power">&#9889; Strength &amp; Power</option>
+          </select>
+        </div>
+
+
+        <!-- ── DROPDOWN 2: EXPERIENCE LEVEL ────────────────────────────────
+             Beginner = simpler exercises, more rest, fewer sets.
+             Advanced = complex movements, progressive overload focus.
+        -->
+        <div class="mb-5">
+          <label for="levelSelect" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            2. Experience Level
+          </label>
+          <select id="levelSelect" class="input-field custom-select w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm transition-colors appearance-none cursor-pointer">
+            <option value="Beginner (0-6 months)">&#11088; Beginner (0-6 months)</option>
+            <option value="Intermediate (6 months - 2 years)">&#128293; Intermediate (6 months - 2 years)</option>
+            <option value="Advanced (2+ years)">&#127942; Advanced (2+ years)</option>
+          </select>
+        </div>
+
+
+        <!-- ── DROPDOWN 3: AVAILABLE EQUIPMENT ─────────────────────────────
+             The AI adapts the exercise selection based on what gear is available.
+             "Home / Bodyweight" means no weights at all — uses push-ups, squats, etc.
+             "Full Gym" allows barbells, cables, machines, everything.
+        -->
+        <div class="mb-5">
+          <label for="equipmentSelect" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            3. Available Equipment
+          </label>
+          <select id="equipmentSelect" class="input-field custom-select w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm transition-colors appearance-none cursor-pointer">
+            <option value="Home / Bodyweight Only (no equipment)">&#127968; Home / Bodyweight Only</option>
+            <option value="Dumbbells Only">&#127955; Dumbbells Only</option>
+            <option value="Resistance Bands">&#129517; Resistance Bands</option>
+            <option value="Full Gym (barbells, machines, cables)">&#127979; Full Gym Access</option>
+          </select>
+        </div>
+
+
+        <!-- ── DROPDOWN 4: DAYS PER WEEK ────────────────────────────────────
+             Controls how many training days the AI plans out.
+             The remaining days are assigned as rest/recovery days.
+        -->
+        <div class="mb-7">
+          <label for="daysSelect" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            4. Training Days Per Week
+          </label>
+          <select id="daysSelect" class="input-field custom-select w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm transition-colors appearance-none cursor-pointer">
+            <option value="3 Days Per Week">3 Days Per Week</option>
+            <option value="4 Days Per Week">4 Days Per Week</option>
+            <option value="5 Days Per Week" selected>5 Days Per Week</option>
+            <option value="6 Days Per Week">6 Days Per Week</option>
+          </select>
+        </div>
+
+
+        <!-- ── GENERATE BUTTON ────────────────────────────────────────────────
+             onclick="generatePlan()" calls our main JS function.
+             id="generateBtn" lets JS disable it while the API call runs.
+             id="btnText" and id="btnIcon" = JS updates them to show loading state.
+        -->
+        <button
+          id="generateBtn"
+          onclick="generatePlan()"
+          class="btn-generate w-full text-white font-bold py-4 rounded-xl text-base flex items-center justify-center gap-2.5 tracking-wide"
+        >
+          <span id="btnIcon" aria-hidden="true">&#8594;</span>
+          <span id="btnText">Generate My Plan</span>
+        </button>
+
+      </div><!-- end input card -->
+
+
+      <!-- HOW IT WORKS info box -->
+      <div class="bg-emerald-500/5 border border-emerald-500/15 rounded-xl p-4">
+        <p class="text-xs font-bold text-emerald-400/75 mb-3 uppercase tracking-widest">How It Works</p>
+        <ol class="text-xs text-white/35 space-y-2 list-decimal list-inside leading-relaxed">
+          <li>Choose your goal, level, equipment, and weekly frequency</li>
+          <li>Click Generate — AI reads your exact parameters</li>
+          <li>Your personalized plan appears as day-by-day cards on the right</li>
+          <li>Copy the plan and track your progress</li>
+        </ol>
+      </div>
+
+
+      <!-- IMPORTANT DISCLAIMER -->
+      <div class="bg-amber-500/5 border border-amber-500/15 rounded-xl p-4">
+        <p class="text-xs text-amber-400/70 leading-relaxed">
+          <span class="font-bold">&#9888; Note:</span> This AI-generated plan is for informational purposes. Always warm up properly and consult a healthcare professional before starting a new exercise program.
+        </p>
+      </div>
+
+    </div><!-- end left column -->
+
+
+    <!-- ============================================================
+         RIGHT COLUMN: OUTPUT PANEL
+         lg:sticky lg:top-24 = stays visible while scrolling on desktop.
+
+         Initially shows an "empty state" placeholder.
+         JavaScript replaces this content after the AI responds.
+         ============================================================ -->
+    <div class="flex flex-col gap-4 lg:sticky lg:top-24">
+
+      <!-- Output panel card header -->
+      <div class="bg-slate-900/60 border border-white/[.08] rounded-2xl overflow-hidden">
+
+        <!-- Panel title bar -->
+        <div class="flex items-center justify-between px-5 py-4 border-b border-white/[.06]" style="background:rgba(255,255,255,0.02)">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" aria-hidden="true"></span>
+            <h2 class="text-sm font-semibold text-white/80">Your Workout Plan</h2>
+          </div>
+
+          <!-- Copy Plan button — hidden until a plan is generated -->
+          <!-- id="copyBtn" lets JS show/hide it and update its label -->
+          <button
+            id="copyBtn"
+            onclick="copyPlan()"
+            class="hidden flex items-center gap-1.5 text-xs text-white/40 hover:text-emerald-400 px-3 py-1.5 rounded-lg border border-white/[.08] hover:border-emerald-500/30 transition-all"
+          >
+            <span>&#128203;</span>
+            <span>Copy Plan</span>
+          </button>
+        </div>
+
+        <!-- ── OUTPUT BOX ─────────────────────────────────────────────────────
+             This <div id="outputBox"> is where JavaScript renders the workout plan.
+             Initially it shows an empty-state prompt to the user.
+             After the AI responds, renderDayCards() replaces all of this HTML
+             with individual day cards.
+        -->
+        <div id="outputBox" class="p-5 min-h-[520px] overflow-y-auto" style="max-height: 70vh;">
+
+          <!-- EMPTY STATE: shown before any plan is generated -->
+          <div class="flex flex-col items-center justify-center py-20 gap-5 text-center">
+
+            <!-- Large icon -->
+            <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-3xl">
+              &#127947;
+            </div>
+
+            <div>
+              <p class="text-white/50 font-semibold mb-1">Your plan will appear here</p>
+              <p class="text-white/25 text-sm max-w-xs leading-relaxed">
+                Set your fitness parameters on the left and click
+                <span class="text-emerald-400/70 font-medium">Generate My Plan</span>
+              </p>
+            </div>
+
+            <!-- Preview of what a day card will look like -->
+            <div class="w-full max-w-sm mt-2 opacity-30 pointer-events-none select-none">
+              <div class="rounded-xl border border-emerald-500/30 bg-slate-800/50 overflow-hidden">
+                <div class="px-4 py-2.5 bg-emerald-500/10 border-b border-white/5">
+                  <p class="text-xs font-bold text-emerald-400 uppercase tracking-wide">DAY 1: Preview Card</p>
+                </div>
+                <div class="px-4 py-3 space-y-2">
+                  <div class="h-3 bg-white/10 rounded-full w-4/5"></div>
+                  <div class="h-3 bg-white/10 rounded-full w-3/5"></div>
+                  <div class="h-3 bg-white/10 rounded-full w-2/3"></div>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- end empty state -->
+
+        </div><!-- end outputBox -->
+
+      </div><!-- end output panel card -->
+
+    </div><!-- end right column -->
+
+  </div><!-- end two-column grid -->
+</main>
+
+
+<!-- ==============================================================================
+     FOOTER
+     ============================================================================== -->
+<footer class="border-t border-white/[.05] py-6">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+      <span class="text-sm font-bold">
+        <span class="text-blue-400">Easy</span><span class="text-purple-400">AI</span><span class="text-pink-400">Toolz</span>
+        <span class="text-white/18 font-normal text-xs ml-2">&mdash; Health &amp; Fitness Suite</span>
+      </span>
+      <div class="flex items-center gap-3 text-xs text-white/22">
+        <a href="/" class="hover:text-white/55 transition-colors">&#8592; All Tools</a>
+        <span>|</span>
+        <a href="/fitness/diet-generator.html" class="hover:text-white/55 transition-colors">Diet Plan Generator &#8594;</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+<!-- ==============================================================================
+     JAVASCRIPT — embedded from workout_logic.js at build time
+     Placed at the BOTTOM so all HTML is parsed and ready first.
+     ============================================================================== -->
+<script>
+// ============================================================
+// workout_logic.js
+// JavaScript for the AI Workout Plan Generator
+// Built into workout-generator.html at build time
+// ============================================================
+
+
+// ─── FUNCTION 1: generatePlan ────────────────────────────────────────────────
+// The main function. Runs when the user clicks "Generate My Plan".
+//
+// FULL DATA FLOW:
+//   Step 1: Read all 4 dropdown values from the page
+//   Step 2: Build a structured AI system prompt from those values
+//   Step 3: Set UI to loading state (spinner, disabled button)
+//   Step 4: POST the prompt to /api/generate (our secure backend)
+//   Step 5: Wait for the AI response
+//   Step 6: Parse the response and render workout day cards
+//   Step 7: Reset the button back to normal
+async function generatePlan() {
+
+  // ── STEP 1: Read all 4 dropdown values ──────────────────────────────────
+  // getElementById finds the HTML element by its id="..." attribute.
+  // .value reads whichever option the user currently has selected.
+  var goal      = document.getElementById('goalSelect').value;
+  var level     = document.getElementById('levelSelect').value;
+  var equipment = document.getElementById('equipmentSelect').value;
+  var days      = document.getElementById('daysSelect').value;
+
+  // ── STEP 2: Build the AI System Prompt ──────────────────────────────────
+  // We wrap the user's 4 choices in expert instructions so the AI knows
+  // exactly what to produce.
+  //
+  // CRITICAL FORMAT INSTRUCTION:
+  // We ask the AI to use "DAY 1:", "DAY 2:" headers so our renderDayCards()
+  // function can parse and split the response into individual day cards.
+  var systemPrompt =
+    'You are an elite certified personal trainer with 15 years of experience. ' +
+    'Create a highly optimized, structured weekly workout plan for a client with these exact parameters:\n' +
+    '- Fitness Goal: ' + goal + '\n' +
+    '- Experience Level: ' + level + '\n' +
+    '- Available Equipment: ' + equipment + '\n' +
+    '- Training Frequency: ' + days + ' per week\n\n' +
+    'STRICT OUTPUT FORMAT RULES:\n' +
+    '1. Start each day EXACTLY with "DAY 1:", "DAY 2:", etc. (capital DAY, number, colon)\n' +
+    '2. Under each day, list exercises in this format: Exercise Name - X sets x Y reps\n' +
+    '3. Include a rest time note per exercise if relevant\n' +
+    '4. Add a short motivational tip at the end of each day\n' +
+    '5. Use a REST DAY label for recovery days\n' +
+    '6. Do NOT include any introduction, explanation, or closing remarks\n' +
+    '7. Output ONLY the structured plan, nothing else';
+
+  // ── STEP 3: Set the UI to Loading State ─────────────────────────────────
+  // While we wait for the AI (usually 3-6 seconds), update the screen so
+  // the user knows something is happening.
+  var btn       = document.getElementById('generateBtn');
+  var btnText   = document.getElementById('btnText');
+  var btnIcon   = document.getElementById('btnIcon');
+  var outputBox = document.getElementById('outputBox');
+  var copyBtn   = document.getElementById('copyBtn');
+
+  btn.disabled        = true;       // prevent double-clicks
+  btnText.textContent = 'Building Your Plan...';
+  btnIcon.innerHTML   = '<span class="spinner"></span>';
+  copyBtn.classList.add('hidden');  // hide copy button until results arrive
+
+  // Show a loading skeleton in the output area
+  outputBox.innerHTML =
+    '<div class="flex flex-col items-center justify-center py-16 gap-4">' +
+      '<div class="w-12 h-12 rounded-full border-2 border-emerald-500/30 border-t-emerald-400 animate-spin"></div>' +
+      '<p class="text-white/40 text-sm">Building your personalized plan...</p>' +
+      '<p class="text-white/25 text-xs">This usually takes 3-6 seconds</p>' +
+    '</div>';
+
+  // ── STEP 4 + 5: Send POST request and wait for AI response ──────────────
+  // fetch() sends an HTTP POST to our secure backend at /api/generate.
+  // "async/await" means: run this line and WAIT for the result before continuing.
+  // try/catch means: if anything goes wrong (network down, server error),
+  // jump to the catch block instead of crashing silently.
+  try {
+
+    var response = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: systemPrompt })
+      // JSON.stringify turns our JS object into a JSON text string:
+      // { prompt: "..." } becomes '{"prompt":"..."}'
+    });
+
+    // Parse the JSON response the backend sends back
+    var data = await response.json();
+
+    // ── STEP 6: Parse and Render the Result ─────────────────────────────
+    if (data.result) {
+      // SUCCESS: render the workout plan as beautiful day cards
+      renderDayCards(data.result.trim(), goal, level, days);
+      copyBtn.classList.remove('hidden'); // show the copy button
+    } else {
+      // API returned an error object instead of a result
+      showError('AI Error: ' + (data.error || 'Unknown error. Please try again.'));
+    }
+
+  } catch (networkError) {
+    // The request could not reach the server at all
+    showError(
+      'Network error: Could not reach the server.\n' +
+      'Make sure the dev server is running and your API key is set in .env.local'
+    );
+  }
+
+  // ── STEP 7: Reset the button ─────────────────────────────────────────────
+  // Always re-enable the button so the user can generate again.
+  btn.disabled        = false;
+  btnText.textContent = 'Generate My Plan';
+  btnIcon.textContent = '\u2192'; // → right arrow
+}
+
+
+// ─── FUNCTION 2: renderDayCards ──────────────────────────────────────────────
+// Takes the raw AI text and splits it into individual day cards.
+//
+// HOW THE PARSING WORKS:
+//   The AI was instructed to start each day with "DAY 1:", "DAY 2:", etc.
+//   We use a regular expression to split the text at those markers.
+//   Then we render each chunk as a styled card.
+//
+// Parameters:
+//   planText  - the raw text from the AI
+//   goal      - the fitness goal (shown in the header)
+//   level     - experience level (shown in the header)
+//   daysLabel - number of days (shown in the header)
+function renderDayCards(planText, goal, level, daysLabel) {
+
+  var outputBox = document.getElementById('outputBox');
+
+  // Store the raw text for the copy function
+  window._currentPlanText = planText;
+
+  // ── Parse the AI text into day sections ─────────────────────────────────
+  // regex: /(?=DAY \d+:)/i means "split at any position followed by DAY + number + colon"
+  // (?= ) is a "lookahead" — it splits WITHOUT removing the "DAY N:" prefix
+  var sections = planText.split(/(?=DAY \d+:)/i).filter(function(s) {
+    return s.trim().length > 0;
+  });
+
+  // If the AI didn't follow the format, fall back to plain text display
+  if (sections.length === 0) {
+    outputBox.innerHTML =
+      '<pre class="whitespace-pre-wrap text-sm text-white/75 leading-relaxed p-2">' +
+      escapeHTML(planText) + '</pre>';
+    return;
+  }
+
+  // ── Build the plan summary header ────────────────────────────────────────
+  var headerHTML =
+    '<div class="mb-6 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5">' +
+      '<div class="flex flex-wrap items-center gap-3">' +
+        '<span class="text-emerald-400 text-lg">&#127947;</span>' +
+        '<div>' +
+          '<p class="text-sm font-bold text-white">' + escapeHTML(goal) + ' Plan &mdash; ' + escapeHTML(level) + '</p>' +
+          '<p class="text-xs text-white/40">' + escapeHTML(daysLabel) + ' per week &middot; Generated by AI</p>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  // ── Render each day section as a card ────────────────────────────────────
+  // map() transforms each section string into an HTML card string.
+  // join('') merges all the card strings into one big HTML string.
+  var dayCardsHTML = sections.map(function(section, index) {
+
+    var trimmed = section.trim();
+    var isRestDay = /rest/i.test(trimmed.slice(0, 30)); // check if it's a rest day
+
+    // Split the section: first line = day header, rest = exercises
+    var lines      = trimmed.split('\n');
+    var dayHeader  = lines[0] || ('DAY ' + (index + 1));
+    var bodyLines  = lines.slice(1).filter(function(l) { return l.trim(); });
+
+    // Color theme: rest days get a muted look; active days get emerald
+    var cardBorder = isRestDay
+      ? 'border-white/8'
+      : 'border-emerald-500/20 hover:border-emerald-500/40';
+    var headerBg   = isRestDay
+      ? 'bg-white/5'
+      : 'bg-emerald-500/10';
+    var headerText = isRestDay
+      ? 'text-white/50'
+      : 'text-emerald-400';
+
+    // Build list items for each exercise line
+    var exerciseItems = bodyLines.map(function(line) {
+      var trimLine = line.trim();
+      if (!trimLine) return '';
+
+      // Check if this line looks like a tip/note (starts with * or Tip or Note)
+      var isTip = /^(\*|tip|note|motivation)/i.test(trimLine);
+      if (isTip) {
+        return '<li class="flex gap-2 text-xs text-emerald-300/60 mt-2 italic">' +
+               '<span>&#10024;</span><span>' + escapeHTML(trimLine.replace(/^\*\s*/, '')) + '</span></li>';
+      }
+
+      // Regular exercise line
+      return '<li class="flex items-start gap-2 text-sm text-white/70 py-1 border-b border-white/5 last:border-0">' +
+             '<span class="text-emerald-500 mt-0.5 flex-shrink-0">&#10003;</span>' +
+             '<span>' + escapeHTML(trimLine) + '</span>' +
+             '</li>';
+    }).join('');
+
+    return '<div class="rounded-xl border ' + cardBorder + ' bg-slate-900/60 overflow-hidden mb-4 transition-colors">' +
+      '<div class="px-4 py-3 ' + headerBg + ' border-b border-white/5">' +
+        '<h3 class="font-bold text-sm ' + headerText + ' uppercase tracking-wide">' +
+          escapeHTML(dayHeader) +
+        '</h3>' +
+      '</div>' +
+      '<div class="px-4 py-3">' +
+        '<ul class="space-y-0.5">' + exerciseItems + '</ul>' +
+      '</div>' +
+    '</div>';
+
+  }).join('');
+
+  outputBox.innerHTML = headerHTML + dayCardsHTML;
+}
+
+
+// ─── FUNCTION 3: showError ────────────────────────────────────────────────────
+// Displays an error message inside the output box.
+// Keeps the UI clean instead of showing a raw JavaScript error.
+function showError(message) {
+  var outputBox = document.getElementById('outputBox');
+  outputBox.innerHTML =
+    '<div class="flex flex-col gap-3 p-6 rounded-xl border border-red-500/20 bg-red-500/5">' +
+      '<div class="flex items-center gap-2 text-red-400">' +
+        '<span class="text-lg">&#9888;</span>' +
+        '<span class="font-semibold text-sm">Something went wrong</span>' +
+      '</div>' +
+      '<pre class="text-xs text-white/50 whitespace-pre-wrap leading-relaxed">' +
+        escapeHTML(message) +
+      '</pre>' +
+      '<button onclick="generatePlan()" class="self-start text-xs bg-white/5 hover:bg-white/10 border border-white/10 text-white/60 px-4 py-2 rounded-lg transition-colors">' +
+        'Try Again' +
+      '</button>' +
+    '</div>';
+}
+
+
+// ─── FUNCTION 4: copyPlan ─────────────────────────────────────────────────────
+// Copies the full raw workout plan text to the clipboard.
+// Uses navigator.clipboard.writeText() — the modern standard clipboard API.
+async function copyPlan() {
+  var textToCopy = window._currentPlanText;
+
+  // Nothing to copy yet
+  if (!textToCopy) return;
+
+  try {
+    await navigator.clipboard.writeText(textToCopy);
+
+    // Visual feedback: change button text to "Copied!" for 2 seconds
+    var copyBtn  = document.getElementById('copyBtn');
+    var origHTML = copyBtn.innerHTML;
+    copyBtn.innerHTML = '<span>\u2713</span><span>Copied!</span>';
+    copyBtn.classList.add('text-emerald-400');
+
+    setTimeout(function() {
+      copyBtn.innerHTML = origHTML;
+      copyBtn.classList.remove('text-emerald-400');
+    }, 2000);
+
+  } catch (e) {
+    // Fallback: select all text in the output if clipboard is blocked
+    var range = document.createRange();
+    range.selectNode(document.getElementById('outputBox'));
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+  }
+}
+
+
+// ─── HELPER: escapeHTML ───────────────────────────────────────────────────────
+// Converts special HTML characters to safe entities.
+// This PREVENTS "XSS injection" — if the AI returned <script> tags,
+// this function turns them into harmless &lt;script&gt; text.
+// ALWAYS escape untrusted content before putting it in innerHTML.
+function escapeHTML(str) {
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
+</script>
+
+<script src="/assets/js/antigravity-core.js"></script>
+</body>
+</html>

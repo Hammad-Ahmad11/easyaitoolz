@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<!--
+  FILE     : /creative/poem-generator.html
+  WEBSITE  : easyaitoolz.com
+  PURPOSE  : AI Poem Generator — Creative Suite
+  TECH     : HTML5 + Tailwind CSS CDN + Vanilla JavaScript
+
+  HOW THIS TOOL WORKS:
+  =====================
+  1. User enters a topic/keywords and selects a poetic style and mood
+  2. User clicks "Generate Poem" (or presses Ctrl+Enter)
+  3. JavaScript wraps the inputs in a detailed poet system prompt
+  4. A POST request goes to /api/generate (our secure Cloudflare backend)
+  5. The backend calls Google Gemini with the API key hidden server-side
+  6. AI returns a poem: first line = TITLE, then blank line, then stanzas
+  7. renderPoem() splits title from body and displays each stanza beautifully
+-->
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Poem Generator &mdash; EasyAIToolz</title>
+  <meta name="description" content="Generate beautiful poems instantly with AI. Choose from Sonnet, Haiku, Ghazal, Free Verse and more. Free, no signup required." />
+
+  <!-- Google Fonts: Inter for UI + Lora (elegant serif) for poem output text -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans:  ['Inter', 'ui-sans-serif'],
+            serif: ['Lora', 'Georgia', 'serif']   // used for poem output text
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* ── BASE ──────────────────────────────────────────────────────────────
+       Same dark background as the homepage for visual consistency. */
+    body {
+      background-color: #06080f;
+      font-family: 'Inter', sans-serif;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+
+    /* ── MESH GRADIENT BACKGROUND ──────────────────────────────────────────
+       Pink-purple aurora glow — matches the Creative suite theme
+       from the homepage tool cards (pink → fuchsia → violet). */
+    .mesh-bg {
+      background-color: #06080f;
+      background-image:
+        radial-gradient(ellipse 70% 55% at 10% 15%, rgba(236,72,153,.12) 0%, transparent 58%),
+        radial-gradient(ellipse 55% 45% at 88% 10%, rgba(168,85,247,.10) 0%, transparent 55%),
+        radial-gradient(ellipse 45% 35% at 55% 90%, rgba(217,70,239,.07) 0%, transparent 52%);
+    }
+
+    /* ── FROSTED GLASS NAVBAR ─────────────────────────────────────────────
+       Blurs the page content behind the fixed top bar. */
+    .navbar-glass {
+      background: rgba(6, 8, 15, 0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+
+    /* ── GRADIENT HEADING TEXT ─────────────────────────────────────────────
+       Pink-to-purple-to-fuchsia gradient clipped to the h1 text. */
+    .gradient-text {
+      background: linear-gradient(135deg, #f472b6 0%, #c084fc 50%, #e879f9 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── INPUT FIELD FOCUS ─────────────────────────────────────────────────
+       Pink glow ring when the user clicks any input or select. */
+    .input-field:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(244, 114, 182, 0.35);
+      border-color: rgba(244, 114, 182, 0.45);
+    }
+
+    /* ── CUSTOM DROPDOWN ARROW ─────────────────────────────────────────────
+       Replaces browser default with a pink SVG chevron arrow. */
+    .custom-select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23f472b6' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 40px;
+    }
+
+    /* ── GENERATE BUTTON ───────────────────────────────────────────────────
+       Pink-to-purple gradient button — matches the Creative suite.
+       Slides gradient on hover for a dynamic feel. */
+    .btn-generate {
+      background: linear-gradient(135deg, #db2777 0%, #9333ea 50%, #c026d3 100%);
+      background-size: 200% 200%;
+      transition: background-position 0.4s ease, opacity 0.2s ease, transform 0.2s ease;
+      box-shadow: 0 4px 24px rgba(219, 39, 119, 0.28);
+    }
+    .btn-generate:hover:not(:disabled) { background-position: right center; transform: translateY(-1px); }
+    .btn-generate:disabled             { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── SPINNER ───────────────────────────────────────────────────────────
+       Rotating ring shown inside the button while the API call is in progress. */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 17px; height: 17px;
+      border: 2px solid rgba(255,255,255,.20);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    /* ── QUILL ANIMATION ───────────────────────────────────────────────────
+       The quill pen icon rocks gently left-right while the AI is writing.
+       @keyframes defines the rock movement; animation applies it. */
+    @keyframes quill-rock {
+      0%   { transform: rotate(-8deg); }
+      50%  { transform: rotate(8deg);  }
+      100% { transform: rotate(-8deg); }
+    }
+    .quill-anim {
+      animation: quill-rock 1.2s ease-in-out infinite;
+      display: inline-block;
+      transform-origin: bottom center;
+    }
+
+    /* ── WRITING PAD (OUTPUT AREA) ─────────────────────────────────────────
+       Styled to look like a premium creative writing notebook.
+       Uses a subtle gradient and left border accent for the "page" feel. */
+    .writing-pad {
+      background: linear-gradient(160deg, rgba(255,255,255,0.025) 0%, rgba(236,72,153,0.03) 100%);
+      border-left: 3px solid rgba(244,114,182,0.20);
+    }
+
+    /* ── POEM STANZAS ─────────────────────────────────────────────────────
+       Each stanza is a <p> block. margin-bottom creates the blank line gap
+       between stanzas that is standard in poetry formatting. */
+    .poem-stanza {
+      font-family: 'Lora', Georgia, serif;
+      font-size: 1.05rem;
+      line-height: 1.85;
+      color: rgba(255,255,255,0.82);
+      margin-bottom: 1.5rem;
+    }
+    .poem-stanza:last-child { margin-bottom: 0; }
+
+    /* ── POEM TITLE ────────────────────────────────────────────────────────
+       Large, elegant serif title above the poem body. */
+    .poem-title {
+      font-family: 'Lora', Georgia, serif;
+      font-size: 1.35rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: rgba(255,255,255,0.92);
+    }
+
+    /* ── METADATA BADGES ───────────────────────────────────────────────────
+       Small pill badges shown below the poem for style, mood, and topic. */
+    .meta-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      border-width: 1px;
+      border-style: solid;
+      display: inline-block;
+    }
+
+    /* ── EXAMPLE CHIP HOVER ────────────────────────────────────────────────
+       Topic suggestion chips that fill the input on click. */
+    .example-chip {
+      transition: all 0.2s ease;
+    }
+    .example-chip:hover {
+      background: rgba(244,114,182,0.12);
+      border-color: rgba(244,114,182,0.30);
+      color: #f9a8d4;
+    }
+
+    /* ── SCROLLBAR ─────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar       { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0d1117; }
+    ::-webkit-scrollbar-thumb { background: #3b1d2e; border-radius: 4px; }
+
+    html { scroll-behavior: smooth; }
+  </style>
+</head>
+
+
+<body class="mesh-bg min-h-screen">
+
+
+<!-- ==============================================================================
+     NAVIGATION BAR
+     Fixed at the top. Same glass effect as every other page on this site.
+     LEFT: back button | divider | brand logo    RIGHT: tool badge
+     ============================================================================== -->
+<nav class="navbar-glass fixed top-0 left-0 right-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+
+      <!-- LEFT: Back arrow + divider + logo -->
+      <div class="flex items-center gap-4">
+
+        <!-- &#8592; = HTML entity for ← left arrow character -->
+        <a href="/" class="flex items-center gap-1.5 text-white/45 hover:text-white/85 transition-colors text-sm font-medium group" aria-label="Back to homepage">
+          <span class="group-hover:-translate-x-0.5 transition-transform inline-block">&#8592;</span>
+          <span class="hidden sm:inline">Back</span>
+        </a>
+
+        <div class="w-px h-5 bg-white/10" aria-hidden="true"></div>
+
+        <!-- Brand logo — pink-tinted gradient SVG for the Creative suite -->
+        <a href="/" class="flex items-center gap-2" aria-label="EasyAIToolz Home">
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="navLgP" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#f472b6"/>
+                <stop offset="100%" stop-color="#c084fc"/>
+              </linearGradient>
+            </defs>
+            <rect x="2" y="2" width="28" height="28" rx="6" stroke="url(#navLgP)" stroke-width="1.5" fill="rgba(244,114,182,0.07)"/>
+            <rect x="9" y="9" width="14" height="14" rx="3" stroke="url(#navLgP)" stroke-width="1.2" fill="rgba(192,132,252,0.10)"/>
+            <line x1="11" y1="2"  x2="11" y2="5"  stroke="#f472b6" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="21" y1="2"  x2="21" y2="5"  stroke="#f472b6" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="11" y1="27" x2="11" y2="30" stroke="#f472b6" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="21" y1="27" x2="21" y2="30" stroke="#f472b6" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="2"  y1="11" x2="5"  y2="11" stroke="#c084fc" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="2"  y1="21" x2="5"  y2="21" stroke="#c084fc" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="27" y1="11" x2="30" y2="11" stroke="#c084fc" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="27" y1="21" x2="30" y2="21" stroke="#c084fc" stroke-width="1.2" stroke-linecap="round"/>
+            <circle cx="16" cy="16" r="2.2" fill="url(#navLgP)"/>
+          </svg>
+          <span class="text-[1rem] font-bold leading-none">
+            <span class="text-blue-400">Easy</span><span class="text-purple-400">AI</span><span class="text-pink-400">Toolz</span>
+          </span>
+        </a>
+      </div>
+
+      <!-- RIGHT: Tool badge -->
+      <span class="hidden sm:flex items-center gap-1.5 bg-pink-500/10 border border-pink-500/20 text-pink-400 text-xs font-semibold px-3 py-1 rounded-full">
+        &#9997; Poem Generator
+      </span>
+
+    </div>
+  </div>
+</nav>
+
+
+<!-- ==============================================================================
+     PAGE HEADER
+     ============================================================================== -->
+<header class="pt-28 pb-8 px-4 text-center">
+  <div class="max-w-2xl mx-auto">
+
+    <!-- Breadcrumb navigation -->
+    <div class="flex items-center justify-center gap-2 text-xs text-white/28 mb-4">
+      <a href="/" class="hover:text-white/55 transition-colors">Home</a>
+      <span>&#8250;</span>
+      <span class="text-white/40">Creative Suite</span>
+      <span>&#8250;</span>
+      <span class="text-pink-400">Poem Generator</span>
+    </div>
+
+    <!-- h1 = primary heading, one per page for SEO -->
+    <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight mb-3">
+      <span class="gradient-text">AI Poem</span>
+      <span class="text-white"> Generator</span>
+    </h1>
+
+    <p class="text-white/50 text-base leading-relaxed max-w-lg mx-auto">
+      Enter a topic, choose a style and mood &mdash; receive a beautifully crafted poem
+      in seconds. Sonnets, Haikus, Ghazals, Free Verse and more. Free, no signup.
+    </p>
+
+  </div>
+</header>
+
+
+<!-- ==============================================================================
+     MAIN WORKSPACE — Two-column interactive tool
+
+     LAYOUT:
+       MOBILE  (< 1024px) → 1 column, panels stack vertically
+       DESKTOP (>= 1024px) → left panel 360px fixed | right panel flexible
+
+     lg:grid-cols-[360px_1fr]
+       = left column fixed at 360px
+       = right column gets all remaining horizontal space (1fr)
+     ============================================================================== -->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+  <div class="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6 items-start">
+
+
+    <!-- ============================================================
+         LEFT COLUMN: INPUT PANEL
+         ============================================================ -->
+    <div class="flex flex-col gap-5">
+
+      <!-- Input card -->
+      <div class="bg-slate-900/60 border border-white/[.08] rounded-2xl p-6">
+
+        <!-- Panel title -->
+        <h2 class="text-sm font-bold text-white mb-6 flex items-center gap-2">
+          <span class="w-7 h-7 rounded-lg bg-pink-500/15 flex items-center justify-center text-base" aria-hidden="true">&#9998;</span>
+          Your Poem Settings
+        </h2>
+
+
+        <!-- ── INPUT 1: TOPIC / KEYWORDS ─────────────────────────────────
+             A free-text input where the user types what the poem should be about.
+             Examples: "Rain in Lahore", "Heartbreak", "My grandmother", "Space"
+             This is a single-line <input>, not <textarea>, because it's brief.
+             placeholder="" = the light grey hint text inside the field.
+        -->
+        <div class="mb-5">
+          <label for="topicInput" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            1. Topic / Keywords
+          </label>
+          <input
+            type="text"
+            id="topicInput"
+            placeholder="e.g., Rain in Lahore, heartbreak, the moon..."
+            class="input-field w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm placeholder-white/20 transition-colors"
+          />
+
+          <!-- Quick topic suggestion chips
+               Clicking one calls fillTopicExample(text) which pre-fills the input.
+               These help users who are not sure what to type. -->
+          <div class="flex flex-wrap gap-1.5 mt-2.5">
+            <button onclick="fillTopicExample(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">Rain &amp; Nostalgia</button>
+            <button onclick="fillTopicExample(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">First Love</button>
+            <button onclick="fillTopicExample(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">The Ocean at Night</button>
+            <button onclick="fillTopicExample(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">Growing Old</button>
+            <button onclick="fillTopicExample(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">War &amp; Peace</button>
+            <button onclick="fillTopicExample(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">My Mother</button>
+          </div>
+
+          <!-- Keyboard shortcut hint -->
+          <p class="text-xs text-white/20 mt-2">
+            <kbd class="bg-white/5 border border-white/10 rounded px-1 py-0.5 font-mono text-xs">Ctrl</kbd>+
+            <kbd class="bg-white/5 border border-white/10 rounded px-1 py-0.5 font-mono text-xs">Enter</kbd> to generate
+          </p>
+        </div>
+
+
+        <!-- ── INPUT 2: POETIC STYLE DROPDOWN ────────────────────────────
+             Determines the structural rules the AI must follow.
+             Each style has different rules (syllable count, rhyme scheme, etc.)
+             The JavaScript system prompt includes specific instructions for each.
+
+             Styles:
+               Free Verse       = no strict rules, most popular modern poetry
+               Sonnet           = 14 lines, Shakespeare-style ABAB rhyme scheme
+               Haiku            = 3 lines, 5-7-5 syllables (Japanese origin)
+               Acrostic         = first letters spell a word
+               Ghazal/Couplets  = Urdu/Persian poetry, repeated refrain (radif)
+        -->
+        <div class="mb-5">
+          <label for="styleSelect" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            2. Poetic Style
+          </label>
+          <select id="styleSelect" class="input-field custom-select w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm transition-colors appearance-none cursor-pointer">
+            <option value="Free Verse">&#128214; Free Verse</option>
+            <option value="Sonnet">&#128081; Sonnet (14 lines, ABAB rhyme)</option>
+            <option value="Haiku">&#127800; Haiku (5-7-5 syllables)</option>
+            <option value="Acrostic">&#128288; Acrostic (first letters spell a word)</option>
+            <option value="Ghazal / Couplets">&#11835; Ghazal / Couplets</option>
+            <option value="Limerick">&#128514; Limerick (AABBA, humorous)</option>
+          </select>
+        </div>
+
+
+        <!-- ── INPUT 3: MOOD / TONE DROPDOWN ─────────────────────────────
+             Controls the emotional register of the poem.
+             The AI uses this to choose vocabulary, imagery, and sentence rhythm.
+
+             Moods:
+               Romantic   = love, longing, beauty, warmth
+               Melancholy = sadness, loss, introspection, quiet pain
+               Inspiring  = hope, strength, courage, resilience
+               Witty/Funny= humor, wordplay, light sarcasm, clever rhymes
+               Mystical   = wonder, the unknown, spiritual, dreamlike
+        -->
+        <div class="mb-7">
+          <label for="moodSelect" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            3. Mood / Tone
+          </label>
+          <select id="moodSelect" class="input-field custom-select w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm transition-colors appearance-none cursor-pointer">
+            <option value="Romantic &amp; Tender">&#10084; Romantic &amp; Tender</option>
+            <option value="Melancholy &amp; Reflective">&#127769; Melancholy &amp; Reflective</option>
+            <option value="Inspiring &amp; Uplifting">&#127775; Inspiring &amp; Uplifting</option>
+            <option value="Witty &amp; Playful">&#128514; Witty &amp; Playful</option>
+            <option value="Mystical &amp; Ethereal">&#10024; Mystical &amp; Ethereal</option>
+            <option value="Fierce &amp; Passionate">&#128293; Fierce &amp; Passionate</option>
+          </select>
+        </div>
+
+
+        <!-- ── GENERATE BUTTON ────────────────────────────────────────────
+             onclick="generatePoem()" — calls the main JS function.
+             id="generateBtn" — JS disables it during the API call.
+             id="btnText" / id="btnIcon" — JS updates these for loading state.
+        -->
+        <button
+          id="generateBtn"
+          onclick="generatePoem()"
+          class="btn-generate w-full text-white font-bold py-4 rounded-xl text-base flex items-center justify-center gap-2.5 tracking-wide"
+        >
+          <span id="btnIcon" aria-hidden="true">&#10024;</span>
+          <span id="btnText">Generate Poem</span>
+        </button>
+
+      </div><!-- end input card -->
+
+
+      <!-- HOW IT WORKS info box -->
+      <div class="bg-pink-500/5 border border-pink-500/15 rounded-xl p-4">
+        <p class="text-xs font-bold text-pink-400/75 mb-3 uppercase tracking-widest">Poetic Styles Guide</p>
+        <dl class="text-xs text-white/32 space-y-2 leading-relaxed">
+          <div><dt class="font-semibold text-white/45 inline">Free Verse &mdash;</dt><dd class="inline"> Modern, no strict rules</dd></div>
+          <div><dt class="font-semibold text-white/45 inline">Sonnet &mdash;</dt><dd class="inline"> 14 lines, ABAB rhyme scheme</dd></div>
+          <div><dt class="font-semibold text-white/45 inline">Haiku &mdash;</dt><dd class="inline"> 3 lines, 5-7-5 syllables</dd></div>
+          <div><dt class="font-semibold text-white/45 inline">Acrostic &mdash;</dt><dd class="inline"> First letters form a word</dd></div>
+          <div><dt class="font-semibold text-white/45 inline">Ghazal &mdash;</dt><dd class="inline"> Urdu/Persian couplets with a refrain</dd></div>
+          <div><dt class="font-semibold text-white/45 inline">Limerick &mdash;</dt><dd class="inline"> AABBA rhyme, humorous tone</dd></div>
+        </dl>
+      </div>
+
+    </div><!-- end left column -->
+
+
+    <!-- ============================================================
+         RIGHT COLUMN: POEM OUTPUT PANEL
+         lg:sticky lg:top-24 = stays in view while scrolling on desktop.
+
+         THREE STATES managed by JavaScript:
+           1. Empty state  — shown before any poem is generated
+           2. Loading state — quill animation while AI writes
+           3. Poem result  — beautiful rendered poem in the writing pad
+         ============================================================ -->
+    <div class="flex flex-col gap-4 lg:sticky lg:top-24">
+
+      <!-- Output card container -->
+      <div class="bg-slate-900/60 border border-white/[.08] rounded-2xl overflow-hidden">
+
+        <!-- Panel title bar -->
+        <div class="flex items-center justify-between px-5 py-4 border-b border-white/[.06]" style="background:rgba(255,255,255,0.025)">
+          <div class="flex items-center gap-2.5">
+            <!-- Pulsing pink dot — indicates "live creative output" -->
+            <span class="w-2 h-2 rounded-full bg-pink-500 animate-pulse" aria-hidden="true"></span>
+            <h2 class="text-sm font-semibold text-white/80">Your Poem</h2>
+          </div>
+
+          <!-- COPY POEM BUTTON
+               Starts as "hidden" (Tailwind hidden class = display:none).
+               JavaScript calls copyBtn.classList.remove('hidden') after a poem arrives.
+               onclick="copyPoem()" calls our JS clipboard function. -->
+          <button
+            id="copyBtn"
+            onclick="copyPoem()"
+            class="hidden items-center gap-1.5 text-xs text-white/38 hover:text-pink-400 px-3 py-1.5 rounded-lg border border-white/[.08] hover:border-pink-500/30 transition-all"
+          >
+            <span>&#128203;</span>
+            <span>Copy Poem</span>
+          </button>
+        </div>
+
+
+        <!-- OUTPUT AREA
+             Contains:
+               1. emptyState div    — shown before generation (replaced by JS)
+               2. poemPad div       — the writing pad (hidden until poem arrives)
+                    └── poemTitle   — title from the AI (first line)
+                    └── poemContent — stanza cards from the AI
+                    └── poemMeta    — style/mood/topic badges
+        -->
+        <div class="overflow-y-auto" style="min-height: 520px; max-height: 75vh;">
+
+
+          <!-- ── EMPTY STATE ─────────────────────────────────────────────────
+               Shown before the user clicks Generate.
+               JavaScript hides this entire div when the poem arrives.
+          -->
+          <div id="emptyState" class="flex flex-col items-center justify-center py-16 gap-6 text-center px-8">
+
+            <!-- Decorative icon container -->
+            <div class="relative">
+              <div class="w-20 h-20 rounded-2xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-4xl">
+                &#9997;
+              </div>
+              <!-- Small sparkle decoration -->
+              <span class="absolute -top-2 -right-2 text-lg" aria-hidden="true">&#10024;</span>
+              <span class="absolute -bottom-1 -left-2 text-base" aria-hidden="true">&#10024;</span>
+            </div>
+
+            <div>
+              <p class="text-white/50 font-semibold mb-2">Your poem will appear here</p>
+              <p class="text-white/25 text-sm max-w-xs leading-relaxed">
+                Enter a topic, choose a style and mood on the left, then click
+                <span class="text-pink-400/70 font-medium">Generate Poem</span>
+              </p>
+            </div>
+
+            <!-- Style preview examples (decorative, not interactive) -->
+            <div class="w-full max-w-sm space-y-3 opacity-22 pointer-events-none select-none">
+              <div class="text-left writing-pad rounded-xl p-4">
+                <p class="poem-title text-sm mb-3">MOONLIT REVERIE</p>
+                <p class="poem-stanza text-sm">
+                  The moon hangs low<br>
+                  over waters still as glass&mdash;<br>
+                  silence breathes between.
+                </p>
+              </div>
+            </div>
+
+          </div><!-- end empty state -->
+
+
+          <!-- ── POEM PAD ─────────────────────────────────────────────────────
+               The actual writing pad that shows when a poem is ready.
+               Starts hidden (class="hidden") — JavaScript removes "hidden" class.
+               writing-pad CSS class gives it the creative notebook feel.
+          -->
+          <div id="poemPad" class="hidden writing-pad m-5 rounded-xl p-7">
+
+            <!-- POEM TITLE
+                 id="poemTitle" — JavaScript sets .textContent to the title.
+                 The AI puts the title as the first line in ALL CAPS.
+            -->
+            <h3 id="poemTitle" class="poem-title mb-5 pb-4 border-b border-white/8 tracking-widest"></h3>
+
+            <!-- POEM CONTENT
+                 id="poemContent" — JavaScript fills this with stanza <p> elements.
+                 Each stanza is rendered as a separate <p class="poem-stanza">.
+                 poem-stanza CSS class = Lora serif font, proper line height.
+            -->
+            <div id="poemContent" class="mb-6">
+              <!-- stanza cards rendered here by JavaScript -->
+            </div>
+
+            <!-- POEM METADATA BADGES
+                 id="poemMeta" — JavaScript fills this with style/mood/topic badges.
+                 Shows which parameters were used to generate this poem. -->
+            <div id="poemMeta" class="flex flex-wrap gap-2 pt-4 border-t border-white/6">
+              <!-- badges rendered here by JavaScript -->
+            </div>
+
+          </div><!-- end poemPad -->
+
+
+        </div><!-- end scrollable output area -->
+
+      </div><!-- end output card -->
+
+    </div><!-- end right column -->
+
+  </div><!-- end two-column grid -->
+</main>
+
+
+<!-- ==============================================================================
+     FOOTER
+     ============================================================================== -->
+<footer class="border-t border-white/[.05] py-6">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+      <span class="text-sm font-bold">
+        <span class="text-blue-400">Easy</span><span class="text-purple-400">AI</span><span class="text-pink-400">Toolz</span>
+        <span class="text-white/18 font-normal text-xs ml-2">&mdash; Creative Suite</span>
+      </span>
+      <div class="flex items-center gap-3 text-xs text-white/22">
+        <a href="/" class="hover:text-white/55 transition-colors">&#8592; All Tools</a>
+        <span>|</span>
+        <a href="/creative/meme-generator.html" class="hover:text-white/55 transition-colors">Meme Generator &#8594;</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+<!-- ==============================================================================
+     JAVASCRIPT — poem_logic.js embedded here at build time.
+     Placed at body bottom so all HTML elements are ready before JS executes.
+     ============================================================================== -->
+<script>
+// ============================================================
+// poem_logic.js
+// JavaScript for the AI Poem Generator
+// Built into poem-generator.html at build time
+// ============================================================
+
+
+// ─── FUNCTION 1: generatePoem ────────────────────────────────────────────────
+// The main function. Runs when the user clicks "Generate Poem".
+//
+// FULL DATA FLOW:
+//   Step 1: Read the topic text input + 2 dropdown values
+//   Step 2: Validate — make sure the user typed a topic
+//   Step 3: Build a detailed AI system prompt from those values
+//   Step 4: Show loading state (spinner, quill animation)
+//   Step 5: POST to /api/generate (our secure Cloudflare backend)
+//   Step 6: Wait for the AI response
+//   Step 7: Render the poem beautifully in the writing pad
+//   Step 8: Reset the button back to normal
+async function generatePoem() {
+
+  // ── STEP 1: Read all input values ───────────────────────────────────────
+  // getElementById finds the HTML element using its id="..." attribute.
+  // .value reads what is typed (for text inputs) or selected (for dropdowns).
+  var topic = document.getElementById('topicInput').value.trim();
+  var style = document.getElementById('styleSelect').value;
+  var mood  = document.getElementById('moodSelect').value;
+
+  // ── STEP 2: Validate — topic is required ────────────────────────────────
+  // Without a topic, the AI has nothing to write about.
+  // We show a gentle message inside the output pad instead of an alert popup.
+  if (!topic) {
+    var pad = document.getElementById('poemPad');
+    pad.classList.remove('hidden');
+    document.getElementById('emptyState').classList.add('hidden');
+    document.getElementById('poemContent').innerHTML =
+      '<p class="text-pink-400/60 text-sm italic text-center py-8">' +
+      'Please enter a topic or keywords above to inspire the poem ✦' +
+      '</p>';
+    document.getElementById('poemTitle').textContent = '';
+    document.getElementById('copyBtn').classList.add('hidden');
+    return; // Stop here — do not call the API
+  }
+
+  // ── STEP 3: Build the AI System Prompt ──────────────────────────────────
+  // This is the "creative director" brief we send to the AI.
+  // It tells the AI what style rules to follow, what mood to use,
+  // and CRUCIALLY: to return ONLY the poem — no extra chat text.
+  //
+  // Special format instructions for each poetic style:
+  //   Haiku      = exactly 3 lines: 5, 7, 5 syllables
+  //   Sonnet     = 14 lines, iambic pentameter
+  //   Acrostic   = first letters of each line spell out the topic
+  //   Ghazal     = 5-12 couplets, each ending with the same radif (refrain)
+  //   Free Verse = no strict rules, but beautiful imagery
+  var styleInstructions = '';
+  if (style === 'Haiku') {
+    styleInstructions = 'Write a Haiku with exactly 3 lines following the 5-7-5 syllable structure. ';
+  } else if (style === 'Sonnet') {
+    styleInstructions = 'Write a 14-line Shakespearean Sonnet with ABAB CDCD EFEF GG rhyme scheme. ';
+  } else if (style === 'Acrostic') {
+    styleInstructions = 'Write an Acrostic poem where the first letter of each line spells out a key word from the topic. ';
+  } else if (style === 'Ghazal / Couplets') {
+    styleInstructions = 'Write a Ghazal with 6-8 couplets. Each couplet must end with the same repeated word or phrase (the radif). ';
+  } else {
+    styleInstructions = 'Write a beautiful free verse poem with natural line breaks and vivid imagery. ';
+  }
+
+  var systemPrompt =
+    'You are an award-winning creative poet celebrated for breathtaking imagery and emotional depth. ' +
+    'Write a beautifully structured poem with these exact parameters:\n' +
+    '- Topic / Keywords: ' + topic + '\n' +
+    '- Poetic Style: ' + style + '\n' +
+    '- Mood / Tone: ' + mood + '\n\n' +
+    styleInstructions +
+    'The mood must be clearly ' + mood + ' throughout.\n' +
+    'Use rich metaphors, sensory imagery, and beautiful language.\n\n' +
+    'STRICT OUTPUT FORMAT:\n' +
+    '- First line: the poem\'s TITLE in ALL CAPS (no label, just the title)\n' +
+    '- Then a blank line\n' +
+    '- Then the poem body with proper stanza breaks (blank line between stanzas)\n' +
+    '- Output ONLY the poem (title + body). No introduction, no explanation, no sign-off.';
+
+  // ── STEP 4: Set loading state ────────────────────────────────────────────
+  var btn     = document.getElementById('generateBtn');
+  var btnText = document.getElementById('btnText');
+  var btnIcon = document.getElementById('btnIcon');
+  var copyBtn = document.getElementById('copyBtn');
+
+  btn.disabled        = true;
+  btnText.textContent = 'Writing...';
+  btnIcon.innerHTML   = '<span class="spinner"></span>';
+  copyBtn.classList.add('hidden');
+
+  // Hide empty state, show the pad with a loading animation
+  document.getElementById('emptyState').classList.add('hidden');
+  document.getElementById('poemPad').classList.remove('hidden');
+  document.getElementById('poemTitle').textContent = '';
+  document.getElementById('poemContent').innerHTML =
+    '<div class="flex flex-col items-center gap-4 py-12">' +
+      '<div class="quill-anim text-3xl select-none" aria-hidden="true">&#9998;</div>' +
+      '<p class="text-white/35 text-sm italic">The poet is thinking...</p>' +
+      '<div class="flex gap-1.5 mt-1">' +
+        '<span class="w-1.5 h-1.5 rounded-full bg-pink-500/50 animate-bounce" style="animation-delay:0ms"></span>' +
+        '<span class="w-1.5 h-1.5 rounded-full bg-purple-500/50 animate-bounce" style="animation-delay:150ms"></span>' +
+        '<span class="w-1.5 h-1.5 rounded-full bg-fuchsia-500/50 animate-bounce" style="animation-delay:300ms"></span>' +
+      '</div>' +
+    '</div>';
+
+  // ── STEP 5 + 6: POST to backend and await response ───────────────────────
+  // fetch() sends an HTTP request to our backend gateway.
+  // await pauses JavaScript here until the server responds.
+  // try/catch handles network failures gracefully.
+  try {
+
+    var response = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: systemPrompt })
+    });
+
+    var data = await response.json();
+
+    // ── STEP 7: Render the poem ──────────────────────────────────────────
+    if (data.result) {
+      renderPoem(data.result.trim(), topic, style, mood);
+      copyBtn.classList.remove('hidden');
+    } else {
+      showPoemError('AI Error: ' + (data.error || 'Unknown error. Please try again.'));
+    }
+
+  } catch(err) { console.error(err); }
+
+  // ── STEP 8: Reset the button ─────────────────────────────────────────────
+  btn.disabled        = false;
+  btnText.textContent = 'Generate Poem';
+  btnIcon.textContent = '\u2728'; // ✨ sparkle
+}
+
+
+// ─── FUNCTION 2: renderPoem ───────────────────────────────────────────────────
+// Parses the AI poem text and renders it beautifully in the writing pad.
+//
+// HOW IT WORKS:
+//   The AI was instructed to put the TITLE on the first line, then a blank line,
+//   then the poem body. We split on the first blank line to separate them.
+//   We then render the body line by line, adding <br> for line breaks
+//   and an extra visible spacer between stanzas (blank lines).
+//
+// Parameters:
+//   poemText — the raw poem text from the AI
+//   topic    — used for metadata badge
+//   style    — used for metadata badge
+//   mood     — used for metadata badge
+function renderPoem(poemText, topic, style, mood) {
+
+  // Store the raw poem for the copy function
+  window._currentPoemText = poemText;
+
+  // ── Parse: separate title from body ─────────────────────────────────────
+  // Split the poem by double-newline (blank line) to get the title chunk.
+  // The first chunk is the title, the rest is the poem body.
+  var parts     = poemText.split(/\n\n+/); // split at one or more blank lines
+  var titlePart = '';
+  var bodyParts = parts;
+
+  // Check if the first chunk looks like a title (all caps, short, no punctuation end)
+  if (parts.length > 1 && parts[0].split('\n').length <= 2) {
+    titlePart = parts[0].trim();
+    bodyParts = parts.slice(1);
+  }
+
+  // ── Render the title ─────────────────────────────────────────────────────
+  var titleEl = document.getElementById('poemTitle');
+  if (titlePart) {
+    titleEl.textContent = titlePart;
+    titleEl.classList.remove('hidden');
+  } else {
+    titleEl.classList.add('hidden');
+  }
+
+  // ── Render the body stanza by stanza ─────────────────────────────────────
+  // Each entry in bodyParts is one stanza (group of lines separated by blank lines).
+  // We render each stanza as a <p> block, with lines joined by <br>.
+  // escapeHTML() is called on each line to prevent any XSS injection.
+  var stanzaHTMLs = bodyParts.map(function(stanza) {
+    var lines = stanza.split('\n').filter(function(l) { return l !== undefined; });
+    var linesHTML = lines.map(function(line) {
+      return escapeHTML(line);
+    }).join('<br>');
+    return '<p class="poem-stanza leading-loose">' + linesHTML + '</p>';
+  });
+
+  document.getElementById('poemContent').innerHTML = stanzaHTMLs.join('');
+
+  // ── Render the metadata badges ────────────────────────────────────────────
+  // Show the style, mood, and topic as small pill badges below the poem.
+  document.getElementById('poemMeta').innerHTML =
+    '<span class="meta-badge bg-pink-500/10 border-pink-500/20 text-pink-400">' + escapeHTML(style) + '</span>' +
+    '<span class="meta-badge bg-purple-500/10 border-purple-500/20 text-purple-400">' + escapeHTML(mood) + '</span>' +
+    '<span class="meta-badge bg-fuchsia-500/10 border-fuchsia-500/20 text-fuchsia-300">' + escapeHTML(topic) + '</span>';
+}
+
+
+// ─── FUNCTION 3: showPoemError ────────────────────────────────────────────────
+// Shows a friendly error message inside the writing pad.
+function showPoemError(message) {
+  document.getElementById('poemTitle').textContent = '';
+  document.getElementById('poemContent').innerHTML =
+    '<div class="flex flex-col gap-3 p-2">' +
+      '<div class="flex items-center gap-2 text-red-400">' +
+        '<span>&#9888;</span>' +
+        '<span class="font-semibold text-sm">Something went wrong</span>' +
+      '</div>' +
+      '<pre class="text-xs text-white/40 whitespace-pre-wrap leading-relaxed">' +
+        escapeHTML(message) +
+      '</pre>' +
+      '<button onclick="generatePoem()" class="self-start text-xs bg-white/5 hover:bg-white/10 border border-white/10 text-white/50 px-4 py-2 rounded-lg transition-colors">' +
+        'Try Again' +
+      '</button>' +
+    '</div>';
+  document.getElementById('poemMeta').innerHTML = '';
+}
+
+
+// ─── FUNCTION 4: copyPoem ─────────────────────────────────────────────────────
+// Copies the full raw poem text to the clipboard.
+async function copyPoem() {
+  var textToCopy = window._currentPoemText;
+  if (!textToCopy) return;
+
+  try {
+    await navigator.clipboard.writeText(textToCopy);
+
+    var btn      = document.getElementById('copyBtn');
+    var origHTML = btn.innerHTML;
+    btn.innerHTML = '<span>\u2713</span><span>Copied!</span>';
+    btn.classList.add('text-pink-400');
+
+    setTimeout(function() {
+      btn.innerHTML = origHTML;
+      btn.classList.remove('text-pink-400');
+    }, 2000);
+
+  } catch (e) {
+    // Fallback: select all text in the poem pad if clipboard is blocked
+    var range = document.createRange();
+    range.selectNode(document.getElementById('poemPad'));
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+  }
+}
+
+
+// ─── FUNCTION 5: fillTopicExample ────────────────────────────────────────────
+// Fills the topic input with an example chip text when clicked.
+function fillTopicExample(text) {
+  document.getElementById('topicInput').value = text;
+  document.getElementById('topicInput').focus();
+}
+
+
+// ─── HELPER: escapeHTML ───────────────────────────────────────────────────────
+// Converts any HTML special characters in a string into safe text entities.
+// This prevents XSS: if the AI returned "<script>alert(1)</script>",
+// this turns it into harmless text: "&lt;script&gt;alert(1)&lt;/script&gt;".
+// ALWAYS use this before inserting AI text into innerHTML.
+function escapeHTML(str) {
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(String(str)));
+  return div.innerHTML;
+}
+
+
+// ─── KEYBOARD SHORTCUT ────────────────────────────────────────────────────────
+// Allow Ctrl+Enter (Windows/Linux) or Cmd+Enter (Mac) to generate.
+// This is a common power-user shortcut — poets who type fast will love it.
+document.getElementById('topicInput').addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    generatePoem();
+  }
+});
+
+</script>
+
+<script src="/assets/js/antigravity-core.js"></script>
+</body>
+</html>

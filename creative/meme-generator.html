@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<!--
+  FILE     : /creative/meme-generator.html
+  WEBSITE  : easyaitoolz.com
+  PURPOSE  : AI Meme Generator — Creative Suite
+  TECH     : HTML5 + Tailwind CSS CDN + Vanilla JavaScript
+
+  HOW THIS TOOL WORKS:
+  =====================
+  1. User types a situation (e.g., "When code works on first try")
+  2. User picks target audience and humor type from dropdowns
+  3. JavaScript builds a system prompt instructing AI to return:
+        "Template: [...] | Top Text: [...] | Bottom Text: [...]"
+  4. POST to /api/generate (our Cloudflare backend — API key hidden server-side)
+  5. parseMemeResponse() splits the pipe-separated AI response into 3 parts
+  6. renderMemeCard() displays Top Text + Bottom Text in Impact-style meme font
+     over a dark gradient background that mimics a real meme template
+-->
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Meme Generator &mdash; EasyAIToolz</title>
+  <meta name="description" content="Generate hilarious meme ideas instantly with AI. Get the template, top text, and bottom text. Free, no signup required." />
+
+  <!-- Google Fonts: Inter for UI, no special font needed (Impact is a system font) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { fontFamily: { sans: ['Inter', 'ui-sans-serif'] } } }
+    }
+  </script>
+
+  <style>
+    /* ── BASE ──────────────────────────────────────────────────────────────
+       Same dark base as all pages on this site. */
+    body {
+      background-color: #06080f;
+      font-family: 'Inter', sans-serif;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+
+    /* ── MESH GRADIENT BACKGROUND ──────────────────────────────────────────
+       Fuchsia-purple aurora glow — Creative suite theme.
+       More vibrant and playful than the other suites. */
+    .mesh-bg {
+      background-color: #06080f;
+      background-image:
+        radial-gradient(ellipse 70% 55% at 8% 18%, rgba(217,70,239,.13) 0%, transparent 58%),
+        radial-gradient(ellipse 55% 45% at 90% 12%, rgba(168,85,247,.11) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 40% at 50% 88%, rgba(236,72,153,.07) 0%, transparent 52%);
+    }
+
+    /* ── FROSTED GLASS NAVBAR ─────────────────────────────────────────────*/
+    .navbar-glass {
+      background: rgba(6, 8, 15, 0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+
+    /* ── GRADIENT HEADING TEXT ─────────────────────────────────────────────
+       Fuchsia-to-purple gradient text for the h1 heading. */
+    .gradient-text {
+      background: linear-gradient(135deg, #e879f9 0%, #a855f7 50%, #ec4899 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── INPUT FOCUS ───────────────────────────────────────────────────────
+       Fuchsia glow ring on any focused input or select. */
+    .input-field:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(217, 70, 239, 0.35);
+      border-color: rgba(217, 70, 239, 0.45);
+    }
+
+    /* ── CUSTOM DROPDOWN ARROW ─────────────────────────────────────────────
+       Fuchsia chevron arrow replaces the browser's default dropdown icon. */
+    .custom-select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23d946ef' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 40px;
+    }
+
+    /* ── GENERATE BUTTON ───────────────────────────────────────────────────
+       Vibrant fuchsia-to-purple gradient. Perfect for the fun meme vibe. */
+    .btn-generate {
+      background: linear-gradient(135deg, #c026d3 0%, #7c3aed 50%, #db2777 100%);
+      background-size: 200% 200%;
+      transition: background-position 0.4s ease, opacity 0.2s ease, transform 0.2s ease;
+      box-shadow: 0 4px 24px rgba(192, 38, 211, 0.30);
+    }
+    .btn-generate:hover:not(:disabled) { background-position: right center; transform: translateY(-1px); }
+    .btn-generate:disabled             { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── SPINNER ───────────────────────────────────────────────────────────*/
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 17px; height: 17px;
+      border: 2px solid rgba(255,255,255,.20);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    /* ── MEME IMAGE BOX ────────────────────────────────────────────────────
+       This is the star of the page — it mimics a real meme image.
+
+       DESIGN BREAKDOWN:
+         - Dark gradient background: simulates a dark meme template photo
+         - flex flex-col: stacks Top Text → (empty center) → Bottom Text
+         - min-height: enough space to look like a real meme
+         - border: subtle purple glow edge
+    */
+    .meme-image-box {
+      background: linear-gradient(160deg, #1a0a2e 0%, #0f0a1e 40%, #1a0820 100%);
+      border: 1px solid rgba(217,70,239,0.20);
+      border-radius: 0.75rem;
+      min-height: 260px;
+      display: flex;
+      flex-direction: column;        /* Stack: top text | center | bottom text */
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ── MEME TEXT (TOP + BOTTOM) ──────────────────────────────────────────
+       This is the CLASSIC meme font look.
+
+       font-family: Impact is the legendary meme font. It's built into
+         virtually every computer and browser.
+       text-shadow: The 4-directional black shadow (-1px -1px, 1px -1px,
+         -1px 1px, 1px 1px) creates the iconic black outline effect.
+         Without this, white text is unreadable on light image areas.
+       letter-spacing: Slightly tighter like real Impact meme text.
+    */
+    .meme-text {
+      font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+      font-size: clamp(1.1rem, 3.5vw, 1.8rem); /* scales with screen size */
+      font-weight: 900;
+      color: #ffffff;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      line-height: 1.2;
+      text-shadow:
+        -2px -2px 0 #000,
+         2px -2px 0 #000,
+        -2px  2px 0 #000,
+         2px  2px 0 #000,
+         0px  3px 6px rgba(0,0,0,0.9);  /* extra drop shadow for depth */
+      text-align: center;
+      word-break: break-word;
+    }
+
+    /* ── MEME TEXT POSITIONS ───────────────────────────────────────────────
+       Top text: padded at the top, like classic meme formatting.
+       Bottom text: padded at the bottom. */
+    .meme-text-top    { padding: 18px 20px 10px; }
+    .meme-text-bottom { padding: 10px 20px 18px; margin-top: auto; }
+
+    /* ── SOCIAL MEDIA POST CARD ────────────────────────────────────────────
+       The outer wrapper mimics a social media post (like a Twitter/Reddit card).
+       It frames the meme with a border and subtle background. */
+    .social-card {
+      background: rgba(255,255,255,0.025);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 1.25rem;
+      overflow: hidden;
+    }
+
+    /* ── METADATA TAGS ─────────────────────────────────────────────────────*/
+    .meta-tag {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      border-width: 1px;
+      border-style: solid;
+      display: inline-block;
+    }
+
+    /* ── EXAMPLE CHIP HOVER ────────────────────────────────────────────────*/
+    .example-chip { transition: all 0.2s ease; }
+    .example-chip:hover {
+      background: rgba(217,70,239,0.12);
+      border-color: rgba(217,70,239,0.30);
+      color: #e879f9;
+    }
+
+    /* ── ENGAGEMENT BAR (social feel) ─────────────────────────────────────
+       Fake "likes" and "shares" at the bottom of the social card. */
+    .engage-btn { transition: color 0.2s ease; }
+    .engage-btn:hover { color: #e879f9; }
+
+    /* ── SCROLLBAR ─────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar       { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0d1117; }
+    ::-webkit-scrollbar-thumb { background: #3b1050; border-radius: 4px; }
+
+    html { scroll-behavior: smooth; }
+  </style>
+</head>
+
+
+<body class="mesh-bg min-h-screen">
+
+
+<!-- ==============================================================================
+     NAVIGATION BAR — same glass effect on every page of this site
+     ============================================================================== -->
+<nav class="navbar-glass fixed top-0 left-0 right-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+
+      <!-- LEFT: back button + divider + logo -->
+      <div class="flex items-center gap-4">
+
+        <a href="/" class="flex items-center gap-1.5 text-white/45 hover:text-white/85 transition-colors text-sm font-medium group" aria-label="Back to homepage">
+          <span class="group-hover:-translate-x-0.5 transition-transform inline-block">&#8592;</span>
+          <span class="hidden sm:inline">Back</span>
+        </a>
+
+        <div class="w-px h-5 bg-white/10" aria-hidden="true"></div>
+
+        <!-- Fuchsia-tinted SVG chip logo for the Creative suite -->
+        <a href="/" class="flex items-center gap-2" aria-label="EasyAIToolz Home">
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="navLgM" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#d946ef"/>
+                <stop offset="100%" stop-color="#a855f7"/>
+              </linearGradient>
+            </defs>
+            <rect x="2" y="2" width="28" height="28" rx="6" stroke="url(#navLgM)" stroke-width="1.5" fill="rgba(217,70,239,0.07)"/>
+            <rect x="9" y="9" width="14" height="14" rx="3" stroke="url(#navLgM)" stroke-width="1.2" fill="rgba(168,85,247,0.10)"/>
+            <line x1="11" y1="2"  x2="11" y2="5"  stroke="#d946ef" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="21" y1="2"  x2="21" y2="5"  stroke="#d946ef" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="11" y1="27" x2="11" y2="30" stroke="#d946ef" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="21" y1="27" x2="21" y2="30" stroke="#d946ef" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="2"  y1="11" x2="5"  y2="11" stroke="#a855f7" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="2"  y1="21" x2="5"  y2="21" stroke="#a855f7" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="27" y1="11" x2="30" y2="11" stroke="#a855f7" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="27" y1="21" x2="30" y2="21" stroke="#a855f7" stroke-width="1.2" stroke-linecap="round"/>
+            <circle cx="16" cy="16" r="2.2" fill="url(#navLgM)"/>
+          </svg>
+          <span class="text-[1rem] font-bold leading-none">
+            <span class="text-blue-400">Easy</span><span class="text-purple-400">AI</span><span class="text-pink-400">Toolz</span>
+          </span>
+        </a>
+      </div>
+
+      <!-- RIGHT: tool badge -->
+      <span class="hidden sm:flex items-center gap-1.5 bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-400 text-xs font-semibold px-3 py-1 rounded-full">
+        &#128514; Meme Generator
+      </span>
+
+    </div>
+  </div>
+</nav>
+
+
+<!-- ==============================================================================
+     PAGE HEADER
+     ============================================================================== -->
+<header class="pt-28 pb-8 px-4 text-center">
+  <div class="max-w-2xl mx-auto">
+
+    <div class="flex items-center justify-center gap-2 text-xs text-white/28 mb-4">
+      <a href="/" class="hover:text-white/55 transition-colors">Home</a>
+      <span>&#8250;</span>
+      <span class="text-white/40">Creative Suite</span>
+      <span>&#8250;</span>
+      <span class="text-fuchsia-400">Meme Generator</span>
+    </div>
+
+    <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight mb-3">
+      <span class="gradient-text">AI Meme</span>
+      <span class="text-white"> Generator</span>
+    </h1>
+
+    <p class="text-white/50 text-base leading-relaxed max-w-lg mx-auto">
+      Describe a situation, pick your vibe &mdash; get a complete meme concept
+      with template, top text, and bottom text. Instantly shareable. Free, no signup.
+    </p>
+
+  </div>
+</header>
+
+
+<!-- ==============================================================================
+     MAIN WORKSPACE — Two-column interactive layout
+
+     LAYOUT:
+       MOBILE  (< 1024px) → 1 column, panels stack top-to-bottom
+       DESKTOP (>= 1024px) → [350px fixed left] | [flexible right]
+
+     The left column is slightly narrower than other tools because
+     the meme has only 2 dropdowns — the right output card needs more room
+     to look like a real social media post.
+     ============================================================================== -->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+  <div class="grid grid-cols-1 lg:grid-cols-[350px_1fr] gap-6 items-start">
+
+
+    <!-- ============================================================
+         LEFT COLUMN: INPUT PANEL
+         ============================================================ -->
+    <div class="flex flex-col gap-5">
+
+      <div class="bg-slate-900/60 border border-white/[.08] rounded-2xl p-6">
+
+        <h2 class="text-sm font-bold text-white mb-6 flex items-center gap-2">
+          <span class="w-7 h-7 rounded-lg bg-fuchsia-500/15 flex items-center justify-center" aria-hidden="true">&#128514;</span>
+          Meme Settings
+        </h2>
+
+
+        <!-- ── INPUT 1: SITUATION / TOPIC ────────────────────────────────
+             The user types the relatable scenario for the meme.
+             Great memes are built on shared experiences:
+             - Programmer jokes ("when code works on first try")
+             - Office situations ("another Monday stand-up meeting")
+             - Student life ("studying 1 hour before the exam")
+             - Universal ("when someone says just 5 more minutes")
+        -->
+        <div class="mb-5">
+          <label for="situationInput" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            1. Situation / Topic
+          </label>
+          <input
+            type="text"
+            id="situationInput"
+            placeholder="e.g., When my code works on the first try..."
+            class="input-field w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm placeholder-white/20 transition-colors"
+          />
+
+          <!-- Example situation chips — clicking fills the input automatically -->
+          <div class="flex flex-wrap gap-1.5 mt-2.5">
+            <button onclick="fillSituation(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">Code works first try</button>
+            <button onclick="fillSituation(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">Monday morning meetings</button>
+            <button onclick="fillSituation(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">Exam 10 mins before</button>
+            <button onclick="fillSituation(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">Free WiFi in public</button>
+            <button onclick="fillSituation(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">Manager reviews code</button>
+            <button onclick="fillSituation(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">gym on January 1st</button>
+          </div>
+
+          <!-- Keyboard shortcut hint -->
+          <p class="text-xs text-white/20 mt-2">
+            <kbd class="bg-white/5 border border-white/10 rounded px-1 py-0.5 font-mono text-xs">Ctrl</kbd>+
+            <kbd class="bg-white/5 border border-white/10 rounded px-1 py-0.5 font-mono text-xs">Enter</kbd> to generate
+          </p>
+        </div>
+
+
+        <!-- ── INPUT 2: TARGET AUDIENCE / STYLE ──────────────────────────
+             Determines WHICH COMMUNITY's meme language the AI should use.
+             Different audiences have different shared references:
+               Tech/Programmers    = stack overflow jokes, git commit messages, CSS puns
+               Students            = exam anxiety, all-nighters, student loans
+               Corporate/Office    = meetings that could've been emails, KPIs
+               General/Relatable   = universal experiences everyone gets
+        -->
+        <div class="mb-5">
+          <label for="audienceSelect" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            2. Target Audience
+          </label>
+          <select id="audienceSelect" class="input-field custom-select w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm transition-colors appearance-none cursor-pointer">
+            <option value="Tech &amp; Programmers">&#128187; Tech &amp; Programmers</option>
+            <option value="Students &amp; Academic">&#127979; Students &amp; Academic</option>
+            <option value="Corporate &amp; Office Workers">&#128188; Corporate &amp; Office Workers</option>
+            <option value="General / Relatable">&#127760; General / Relatable</option>
+            <option value="Gym &amp; Fitness Enthusiasts">&#127947; Gym &amp; Fitness Enthusiasts</option>
+            <option value="Gamers">&#127918; Gamers</option>
+          </select>
+        </div>
+
+
+        <!-- ── INPUT 3: HUMOR TYPE ────────────────────────────────────────
+             Controls the TONE and EDGE of the meme humor.
+               Sarcastic   = dry, ironic, "oh yeah sure" energy
+               Wholesome   = warm, positive, feel-good
+               Exaggerated = over-the-top reaction, dramatic comparisons
+               Edgy        = boundary-pushing, dark humor (but not offensive)
+        -->
+        <div class="mb-7">
+          <label for="humorSelect" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            3. Humor Type
+          </label>
+          <select id="humorSelect" class="input-field custom-select w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm transition-colors appearance-none cursor-pointer">
+            <option value="Sarcastic &amp; Ironic">&#128580; Sarcastic &amp; Ironic</option>
+            <option value="Wholesome &amp; Relatable">&#129505; Wholesome &amp; Relatable</option>
+            <option value="Exaggerated &amp; Dramatic">&#128561; Exaggerated &amp; Dramatic</option>
+            <option value="Edgy &amp; Dark">&#128128; Edgy &amp; Dark</option>
+            <option value="Absurd &amp; Random">&#129303; Absurd &amp; Random</option>
+          </select>
+        </div>
+
+
+        <!-- ── GENERATE BUTTON ────────────────────────────────────────────
+             onclick="generateMeme()" = calls the main JS function
+             id="generateBtn"  = JS disables during API call
+             id="btnText"      = changes to "Cooking..." during loading
+             id="btnIcon"      = swaps to spinner during loading
+        -->
+        <button
+          id="generateBtn"
+          onclick="generateMeme()"
+          class="btn-generate w-full text-white font-bold py-4 rounded-xl text-base flex items-center justify-center gap-2.5 tracking-wide"
+        >
+          <span id="btnIcon" aria-hidden="true">&#9889;</span>
+          <span id="btnText">Generate Meme Idea</span>
+        </button>
+
+      </div><!-- end input card -->
+
+
+      <!-- Humor guide reference box -->
+      <div class="bg-fuchsia-500/5 border border-fuchsia-500/15 rounded-xl p-4">
+        <p class="text-xs font-bold text-fuchsia-400/75 mb-3 uppercase tracking-widest">Humor Style Guide</p>
+        <dl class="text-xs text-white/32 space-y-2 leading-relaxed">
+          <div><dt class="font-semibold text-white/45 inline">Sarcastic &mdash;</dt><dd class="inline"> Dry irony, eye-roll energy</dd></div>
+          <div><dt class="font-semibold text-white/45 inline">Wholesome &mdash;</dt><dd class="inline"> Warm, positive, feel-good laughs</dd></div>
+          <div><dt class="font-semibold text-white/45 inline">Exaggerated &mdash;</dt><dd class="inline"> Overdramatic, wild comparisons</dd></div>
+          <div><dt class="font-semibold text-white/45 inline">Edgy &mdash;</dt><dd class="inline"> Dark humor, boundary-testing</dd></div>
+          <div><dt class="font-semibold text-white/45 inline">Absurd &mdash;</dt><dd class="inline"> Random, surreal, chaotic good</dd></div>
+        </dl>
+      </div>
+
+    </div><!-- end left column -->
+
+
+    <!-- ============================================================
+         RIGHT COLUMN: MEME PREVIEW PANEL
+         lg:sticky lg:top-24 = stays in view while scrolling on desktop.
+
+         LAYOUT OF THIS COLUMN:
+         ┌─────────────────────────────────┐
+         │ social-card                     │
+         │  ┌──────────────────────────┐   │
+         │  │ card header (avatar bar) │   │
+         │  ├──────────────────────────┤   │
+         │  │ meme-image-box           │   │
+         │  │   [TOP TEXT — IMPACT]    │   │
+         │  │   [center icon]          │   │
+         │  │   [BOTTOM TEXT — IMPACT] │   │
+         │  ├──────────────────────────┤   │
+         │  │ template badge           │   │
+         │  ├──────────────────────────┤   │
+         │  │ engagement bar (likes)   │   │
+         │  └──────────────────────────┘   │
+         └─────────────────────────────────┘
+         ============================================================ -->
+    <div class="flex flex-col gap-4 lg:sticky lg:top-24">
+
+      <!-- SOCIAL MEDIA POST CARD WRAPPER
+           Styled to look like a social media post (Twitter/Reddit card)
+           This gives the meme output a real "shareable content" feel. -->
+      <div class="social-card" id="memePreviewContainer">
+
+        <!-- ── SOCIAL CARD HEADER ─────────────────────────────────────────
+             Mimics the top of a social media post.
+             Shows a fake avatar, username, and the copy button. -->
+        <div class="flex items-center justify-between px-4 py-3 border-b border-white/[.05]">
+          <div class="flex items-center gap-2.5">
+            <!-- Fake avatar circle -->
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">AI</div>
+            <div>
+              <p class="text-xs font-semibold text-white/80">EasyAIToolz</p>
+              <p class="text-xs text-white/28">Meme Generator</p>
+            </div>
+          </div>
+
+          <!-- COPY TEXT BUTTON
+               Hidden until a meme is generated (JavaScript removes "hidden" class).
+               onclick="copyMemeText()" copies Template + Top + Bottom text. -->
+          <button
+            id="copyBtn"
+            onclick="copyMemeText()"
+            class="hidden items-center gap-1.5 text-xs text-white/38 hover:text-fuchsia-400 px-3 py-1.5 rounded-lg border border-white/[.08] hover:border-fuchsia-500/30 transition-all"
+          >
+            <span>&#128203;</span>
+            <span>Copy Text</span>
+          </button>
+        </div>
+
+
+        <!-- ── MEME OUTPUT AREA ───────────────────────────────────────────
+             Two states managed by JavaScript:
+               1. emptyState — shown before any meme is generated
+               2. memeCard   — shown after the AI responds
+
+             The memeCard is built as:
+               [template badge] → [meme image box] → [tags] → [engagement bar]
+        -->
+        <div class="p-4">
+
+          <!-- ── EMPTY STATE ──────────────────────────────────────────────
+               Shown when the user hasn't generated yet.
+               JavaScript replaces this content with a loading animation,
+               then hides this div entirely when the meme card arrives. -->
+          <div id="emptyState">
+            <div class="flex flex-col items-center justify-center gap-5 py-14 text-center">
+
+              <!-- Big emoji icon -->
+              <div class="w-20 h-20 rounded-2xl bg-fuchsia-500/10 border border-fuchsia-500/20 flex items-center justify-center text-4xl">
+                &#128514;
+              </div>
+
+              <div>
+                <p class="text-white/50 font-semibold mb-1.5">Your meme will appear here</p>
+                <p class="text-white/25 text-sm max-w-xs leading-relaxed">
+                  Enter a relatable situation and click
+                  <span class="text-fuchsia-400/70 font-medium">Generate Meme Idea</span>
+                </p>
+              </div>
+
+              <!-- Preview of what the meme box looks like (skeleton) -->
+              <div class="w-full max-w-xs opacity-20 pointer-events-none select-none">
+                <div class="meme-image-box p-4 rounded-xl">
+                  <div class="meme-text-top">
+                    <span class="meme-text text-sm">TOP TEXT GOES HERE</span>
+                  </div>
+                  <div class="flex items-center justify-center py-6 text-3xl opacity-30">&#128514;</div>
+                  <div class="meme-text-bottom">
+                    <span class="meme-text text-sm">BOTTOM TEXT HERE</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div><!-- end empty state -->
+
+
+          <!-- ── MEME RESULT CARD ─────────────────────────────────────────
+               Hidden initially (class="hidden").
+               JavaScript calls .classList.remove('hidden') after the AI responds.
+
+               STRUCTURE:
+                 1. Template badge   — which famous meme template the AI chose
+                 2. memeImageBox     — the actual meme visual (Impact text on dark bg)
+                 3. memeTags         — humor type + audience tags
+                 4. Engagement bar   — fake likes/shares for social media feel
+          -->
+          <div id="memeCard" class="hidden">
+
+            <!-- 1. TEMPLATE BADGE
+                 Shows which famous meme template was suggested.
+                 JavaScript sets this via document.getElementById('templateBadge').innerHTML -->
+            <div id="templateBadge" class="flex items-center gap-1.5 text-xs text-fuchsia-300/80 bg-fuchsia-500/8 border border-fuchsia-500/20 px-3 py-2 rounded-lg mb-3 font-medium">
+              <!-- Content filled by JavaScript -->
+            </div>
+
+
+            <!-- 2. THE ACTUAL MEME VISUAL BOX
+                 This is the core meme UI element.
+                 id="memeImageBox" — JavaScript fills this with:
+                   <div class="meme-text-top">   TOP TEXT   </div>
+                   <div class="flex...">          center icon </div>
+                   <div class="meme-text-bottom"> BOTTOM TEXT </div>
+
+                 meme-image-box CSS class = dark gradient + flex-col layout.
+                 meme-text CSS class = Impact font + black text outline shadow.
+            -->
+            <div class="meme-image-box mb-3" id="memeImageBox">
+              <!-- JavaScript populates this -->
+            </div>
+
+
+            <!-- 3. METADATA TAGS
+                 id="memeTags" — JavaScript fills with audience + humor badges. -->
+            <div id="memeTags" class="flex flex-wrap gap-2 mb-3">
+              <!-- badges filled by JS -->
+            </div>
+
+
+            <!-- 4. ENGAGEMENT BAR
+                 Mimics the like / share / comment bar from social media.
+                 Purely decorative / fun — makes the output feel like real content.
+                 id="likeCount" and id="shareCount" are randomized by JS. -->
+            <div class="flex items-center gap-5 pt-3 border-t border-white/[.05]">
+              <button class="engage-btn flex items-center gap-1.5 text-white/35 text-sm hover:text-fuchsia-400 transition-colors">
+                <span>&#10084;</span>
+                <span id="likeCount">0K</span>
+              </button>
+              <button class="engage-btn flex items-center gap-1.5 text-white/35 text-sm hover:text-fuchsia-400 transition-colors">
+                <span>&#8634;</span>
+                <span id="shareCount">0</span>
+              </button>
+              <button class="engage-btn flex items-center gap-1.5 text-white/35 text-sm hover:text-fuchsia-400 transition-colors ml-auto" onclick="generateMeme()" title="Generate another meme">
+                <span>&#9889;</span>
+                <span class="text-xs">New</span>
+              </button>
+            </div>
+
+          </div><!-- end memeCard -->
+
+        </div><!-- end p-4 content area -->
+
+      </div><!-- end social-card -->
+
+    </div><!-- end right column -->
+
+  </div><!-- end two-column grid -->
+</main>
+
+
+<!-- ==============================================================================
+     FOOTER
+     ============================================================================== -->
+<footer class="border-t border-white/[.05] py-6">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+      <span class="text-sm font-bold">
+        <span class="text-blue-400">Easy</span><span class="text-purple-400">AI</span><span class="text-pink-400">Toolz</span>
+        <span class="text-white/18 font-normal text-xs ml-2">&mdash; Creative Suite</span>
+      </span>
+      <div class="flex items-center gap-3 text-xs text-white/22">
+        <a href="/creative/poem-generator.html" class="hover:text-white/55 transition-colors">&#8592; Poem Generator</a>
+        <span>|</span>
+        <a href="/creative/logo-maker.html" class="hover:text-white/55 transition-colors">Logo Maker &#8594;</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+<!-- ==============================================================================
+     JAVASCRIPT — meme_logic.js embedded here at build time.
+     Placed at body bottom so all HTML elements are ready before JS runs.
+     ============================================================================== -->
+<script>
+// ============================================================
+// meme_logic.js
+// JavaScript for the AI Meme Generator
+// Built into meme-generator.html at build time
+// ============================================================
+
+
+// ─── FUNCTION 1: generateMeme ────────────────────────────────────────────────
+// The main function. Runs when the user clicks "Generate Meme Idea ⚡".
+//
+// FULL DATA FLOW:
+//   Step 1: Read the topic text + 2 dropdown values
+//   Step 2: Validate — make sure the user typed a situation/topic
+//   Step 3: Build the AI system prompt
+//   Step 4: Show loading state (disable button, show spinner in preview box)
+//   Step 5: POST to /api/generate (our secure backend)
+//   Step 6: Wait for the AI response
+//   Step 7: Parse the structured response text into 3 parts
+//   Step 8: Render the meme preview card with Top Text & Bottom Text
+//   Step 9: Reset the button to normal
+async function generateMeme() {
+
+  // ── STEP 1: Read all user inputs ────────────────────────────────────────
+  var situation = document.getElementById('situationInput').value.trim();
+  var audience  = document.getElementById('audienceSelect').value;
+  var humor     = document.getElementById('humorSelect').value;
+
+  // ── STEP 2: Validate — topic is required ────────────────────────────────
+  if (!situation) {
+    // Show a hint inside the preview card instead of an annoying alert
+    showMemeMessage('&#128172; Enter a situation or topic on the left to generate your meme idea!', 'hint');
+    // Briefly shake the input field to draw attention
+    var input = document.getElementById('situationInput');
+    input.style.borderColor = 'rgba(217,70,239,0.7)';
+    setTimeout(function() { input.style.borderColor = ''; }, 2000);
+    return;
+  }
+
+  // ── STEP 3: Build the AI System Prompt ──────────────────────────────────
+  // CRITICAL: We instruct the AI to return data in a SPECIFIC PARSEABLE FORMAT:
+  //   Template: [description] | Top Text: [text] | Bottom Text: [text]
+  //
+  // This pipe-separated format makes it easy for our parseMemResponse()
+  // function to split the string and extract each piece.
+  var systemPrompt =
+    'You are a viral internet meme lord and comedy writer with 10 years of experience creating memes. ' +
+    'Create a hilarious, shareable meme concept based on:\n' +
+    '- Situation / Topic: ' + situation + '\n' +
+    '- Target Audience / Style: ' + audience + '\n' +
+    '- Humor Type: ' + humor + '\n\n' +
+    'STRICT OUTPUT FORMAT — return EXACTLY this structure, nothing else:\n' +
+    'Template: [Name a specific famous meme template or describe the scene, e.g. "Drake Pointing Meme" or "Distracted Boyfriend"] | Top Text: [Short punchy top text, max 8 words, ALL CAPS] | Bottom Text: [Short punchy bottom text, max 8 words, ALL CAPS]\n\n' +
+    'RULES:\n' +
+    '1. Top Text and Bottom Text MUST be in ALL CAPS\n' +
+    '2. Both texts must be short and punchy (4-8 words each)\n' +
+    '3. Make it genuinely funny and relatable to the target audience\n' +
+    '4. Keep the humor style strictly ' + humor + '\n' +
+    '5. Output ONLY the formatted line above. No explanation, no intro, no outro.';
+
+  // ── STEP 4: Set Loading State ────────────────────────────────────────────
+  var btn     = document.getElementById('generateBtn');
+  var btnText = document.getElementById('btnText');
+  var btnIcon = document.getElementById('btnIcon');
+  var copyBtn = document.getElementById('copyBtn');
+
+  btn.disabled        = true;
+  btnText.textContent = 'Cooking...';
+  btnIcon.innerHTML   = '<span class="spinner"></span>';
+  copyBtn.classList.add('hidden');
+
+  // Show a loading animation inside the meme preview box
+  showMemeMessage(
+    '<div class="flex flex-col items-center gap-3">' +
+      '<div class="text-4xl select-none" aria-hidden="true">&#129300;</div>' +
+      '<p class="text-fuchsia-400/70 text-sm font-bold uppercase tracking-widest">Consulting the meme lords...</p>' +
+      '<div class="flex gap-1.5">' +
+        '<span class="w-2 h-2 rounded-full bg-fuchsia-500/60 animate-bounce" style="animation-delay:0ms"></span>' +
+        '<span class="w-2 h-2 rounded-full bg-purple-500/60 animate-bounce" style="animation-delay:150ms"></span>' +
+        '<span class="w-2 h-2 rounded-full bg-pink-500/60 animate-bounce" style="animation-delay:300ms"></span>' +
+      '</div>' +
+    '</div>',
+    'loading'
+  );
+
+  // ── STEP 5 + 6: POST to backend and await response ──────────────────────
+  try {
+
+    var response = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: systemPrompt })
+    });
+
+    var data = await response.json();
+
+    // ── STEP 7 + 8: Parse and render ──────────────────────────────────────
+    if (data.result) {
+      var parsed = parseMemeResponse(data.result.trim());
+      renderMemeCard(parsed, situation, audience, humor);
+      copyBtn.classList.remove('hidden');
+    } else {
+      showMemeMessage('&#9888; AI Error: ' + escapeHTML(data.error || 'Unknown error.'), 'error');
+    }
+
+  } catch(err) { console.error(err); }
+
+  // ── STEP 9: Reset button ─────────────────────────────────────────────────
+  btn.disabled        = false;
+  btnText.textContent = 'Generate Meme Idea';
+  btnIcon.textContent = '\u26A1'; // ⚡ lightning bolt
+}
+
+
+// ─── FUNCTION 2: parseMemeResponse ───────────────────────────────────────────
+// Extracts the three parts from the AI's pipe-separated response string.
+//
+// EXPECTED INPUT FORMAT (from the AI):
+//   "Template: Drake Pointing Meme | Top Text: WRITING COMMENTS | Bottom Text: NEVER COMMENTING CODE"
+//
+// HOW PARSING WORKS:
+//   1. Split the whole string by " | " (space-pipe-space) to get 3 chunks
+//   2. For each chunk, split by ": " to separate the label from the value
+//   3. Return an object with template, topText, bottomText properties
+//
+// FALLBACK: If the AI didn't follow the format, we do our best to
+//   extract whatever we can from the raw text.
+function parseMemeResponse(rawText) {
+
+  // Default values in case parsing fails
+  var result = {
+    template:   'Classic Meme Format',
+    topText:    '',
+    bottomText: rawText.toUpperCase(), // use the full text as bottom fallback
+    raw:        rawText
+  };
+
+  // Try splitting by the pipe character " | "
+  var parts = rawText.split(/\s*\|\s*/);
+
+  if (parts.length >= 3) {
+    // SUCCESSFUL PARSE: we got all 3 parts
+    // For each part, strip the "Label: " prefix and take the rest.
+    // e.g., "Template: Drake Meme" → split on ": " → ["Template", "Drake Meme"]
+    result.template   = extractValue(parts[0], 'Template');
+    result.topText    = extractValue(parts[1], 'Top Text');
+    result.bottomText = extractValue(parts[2], 'Bottom Text');
+
+  } else if (parts.length === 2) {
+    // Partial parse: got 2 parts — assume top/bottom
+    result.topText    = extractValue(parts[0], 'Top Text');
+    result.bottomText = extractValue(parts[1], 'Bottom Text');
+
+  } else {
+    // Fallback: try line-by-line parsing
+    var lines = rawText.split('\n').filter(function(l) { return l.trim(); });
+    if (lines.length >= 1) result.template   = lines[0].replace(/^template:\s*/i, '').trim();
+    if (lines.length >= 2) result.topText    = lines[1].replace(/^top\s*text:\s*/i, '').trim().toUpperCase();
+    if (lines.length >= 3) result.bottomText = lines[2].replace(/^bottom\s*text:\s*/i, '').trim().toUpperCase();
+  }
+
+  return result;
+}
+
+// Helper for parseMemeResponse: strips a "Label: " prefix from a string
+function extractValue(str, label) {
+  // Remove "Label: " (case-insensitive) from the start, return the rest
+  var regex = new RegExp('^' + label + '\\s*:\\s*', 'i');
+  return str.replace(regex, '').trim();
+}
+
+
+// ─── FUNCTION 3: renderMemeCard ──────────────────────────────────────────────
+// Takes the parsed meme data and renders the full visual meme preview card.
+//
+// THE MEME PREVIEW MIMICS A REAL MEME:
+//   - Dark/dramatic background gradient (like a classic meme image)
+//   - TOP TEXT in big Impact-style bold white font with black text-shadow
+//   - BOTTOM TEXT in the same style at the bottom
+//   - The text-shadow with multiple layers creates the classic "meme font" look
+//
+// Parameters:
+//   parsed   — object from parseMemeResponse() with template/topText/bottomText
+//   situation — user's original topic (for the sharing tags below)
+//   audience  — selected audience (for metadata)
+//   humor     — selected humor type (for metadata)
+function renderMemeCard(parsed, situation, audience, humor) {
+
+  // Save for the copy function
+  window._currentMemeData = parsed;
+
+  var container = document.getElementById('memePreviewContainer');
+
+  // ── 1. Template badge ────────────────────────────────────────────────────
+  document.getElementById('templateBadge').textContent = '&#127917; ' + escapeHTML(parsed.template);
+  document.getElementById('templateBadge').innerHTML =
+    '<span class="mr-1" aria-hidden="true">&#127917;</span>' +
+    '<span class="font-medium">Template:</span> ' +
+    escapeHTML(parsed.template);
+
+  // ── 2. Render the meme image box ─────────────────────────────────────────
+  // This DIV mimics a classic meme image:
+  //   - A dark gradient background (representing the meme template image)
+  //   - TOP TEXT floated to the top center
+  //   - BOTTOM TEXT floated to the bottom center
+  //   - Impact font + black text-shadow = classic internet meme look
+  document.getElementById('memeImageBox').innerHTML =
+    // Top text area: positioned at the top of the meme box
+    '<div class="meme-text-top">' +
+      '<span class="meme-text">' + escapeHTML(parsed.topText || '') + '</span>' +
+    '</div>' +
+
+    // Center decorative area: a subtle emoji or icon
+    '<div class="flex items-center justify-center flex-1">' +
+      '<div class="text-5xl opacity-15 select-none" aria-hidden="true">&#128514;</div>' +
+    '</div>' +
+
+    // Bottom text area: positioned at the bottom of the meme box
+    '<div class="meme-text-bottom">' +
+      '<span class="meme-text">' + escapeHTML(parsed.bottomText || '') + '</span>' +
+    '</div>';
+
+  // ── 3. Show the card (it starts hidden) ──────────────────────────────────
+  document.getElementById('memeCard').classList.remove('hidden');
+  document.getElementById('emptyState').classList.add('hidden');
+
+  // ── 4. Update the engagement bar (fake but fun social media feel) ─────────
+  // Randomize "like" and "share" counts slightly on each generation
+  document.getElementById('likeCount').textContent = (Math.floor(Math.random() * 9) + 1) + 'K';
+  document.getElementById('shareCount').textContent = (Math.floor(Math.random() * 900) + 100);
+
+  // ── 5. Show metadata tags below the meme card ────────────────────────────
+  document.getElementById('memeTags').innerHTML =
+    '<span class="meta-tag bg-fuchsia-500/10 border-fuchsia-500/20 text-fuchsia-400">' + escapeHTML(humor) + '</span>' +
+    '<span class="meta-tag bg-purple-500/10 border-purple-500/20 text-purple-400">' + escapeHTML(audience) + '</span>';
+}
+
+
+// ─── FUNCTION 4: showMemeMessage ─────────────────────────────────────────────
+// Shows a loading, hint, or error message inside the meme preview area.
+//
+// Parameters:
+//   html — the HTML content to show (can include emojis and tags)
+//   type — 'loading', 'hint', or 'error' (controls styling)
+function showMemeMessage(html, type) {
+  // Hide the result card, show the empty state placeholder
+  document.getElementById('memeCard').classList.add('hidden');
+  document.getElementById('emptyState').classList.remove('hidden');
+
+  var colors = {
+    loading: 'text-fuchsia-400/70',
+    hint:    'text-white/40',
+    error:   'text-red-400'
+  };
+
+  document.getElementById('emptyState').innerHTML =
+    '<div class="flex flex-col items-center justify-center gap-4 py-14 text-center px-6">' +
+      '<div class="' + (colors[type] || colors.hint) + '">' + html + '</div>' +
+    '</div>';
+}
+
+
+// ─── FUNCTION 5: copyMemeText ────────────────────────────────────────────────
+// Copies the meme text (Top + Bottom) to the clipboard.
+async function copyMemeText() {
+  var meme = window._currentMemeData;
+  if (!meme) return;
+
+  var textToCopy =
+    'Template: ' + meme.template + '\n' +
+    'Top Text: '    + meme.topText    + '\n' +
+    'Bottom Text: ' + meme.bottomText;
+
+  try {
+    await navigator.clipboard.writeText(textToCopy);
+
+    var btn      = document.getElementById('copyBtn');
+    var origHTML = btn.innerHTML;
+    btn.innerHTML = '<span>\u2713</span><span>Copied!</span>';
+    btn.classList.add('text-fuchsia-400');
+    setTimeout(function() {
+      btn.innerHTML = origHTML;
+      btn.classList.remove('text-fuchsia-400');
+    }, 2000);
+
+  } catch (e) {
+    // Fallback: select all in the meme card
+    var range = document.createRange();
+    range.selectNode(document.getElementById('memeCard'));
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+  }
+}
+
+
+// ─── FUNCTION 6: fillSituation ───────────────────────────────────────────────
+// Fills the situation text input with an example chip text.
+function fillSituation(text) {
+  document.getElementById('situationInput').value = text;
+  document.getElementById('situationInput').focus();
+}
+
+
+// ─── HELPER: escapeHTML ───────────────────────────────────────────────────────
+// Safely escapes all HTML special characters before inserting into innerHTML.
+// Prevents XSS — if the AI response contained <script> tags, this neutralizes them.
+function escapeHTML(str) {
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(String(str)));
+  return div.innerHTML;
+}
+
+
+// ─── KEYBOARD SHORTCUT ────────────────────────────────────────────────────────
+// Ctrl+Enter / Cmd+Enter triggers generation from anywhere in the form.
+document.getElementById('situationInput').addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    generateMeme();
+  }
+});
+
+</script>
+
+<script src="/assets/js/antigravity-core.js"></script>
+</body>
+</html>

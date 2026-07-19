@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<!--
+  FILE     : /fitness/diet-generator.html
+  WEBSITE  : easyaitoolz.com
+  PURPOSE  : AI Diet Plan Generator — Health & Fitness Suite
+  TECH     : HTML5 + Tailwind CSS CDN + Vanilla JavaScript
+
+  HOW THIS TOOL WORKS:
+  =====================
+  1. User picks their Dietary Goal, Diet Type, Activity Level, and any food exclusions
+  2. User clicks "Generate My Diet Plan"
+  3. JavaScript assembles a detailed AI prompt from those 4 values
+  4. A POST request goes to /api/generate (our secure Cloudflare backend)
+  5. Backend calls Google Gemini — API key stays hidden on the server
+  6. AI returns a meal plan formatted with BREAKFAST:, LUNCH:, DINNER: headers
+  7. renderMealCards() parses the response and displays each meal as a card
+-->
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Diet Plan Generator &mdash; EasyAIToolz</title>
+  <meta name="description" content="Generate a free personalized daily meal plan with macros. Choose your goal, diet type, and activity level. Built by AI, no signup needed." />
+
+  <!-- Google Fonts: Inter — same font used across all pages for consistency -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN: utility-first CSS classes -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { fontFamily: { sans: ['Inter', 'ui-sans-serif'] } } }
+    }
+  </script>
+
+  <style>
+    /* ── BASE ──────────────────────────────────────────────────────────────
+       Same dark foundation as every other page on this site. */
+    body {
+      background-color: #06080f;
+      font-family: 'Inter', sans-serif;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+
+    /* ── MESH GRADIENT BACKGROUND ──────────────────────────────────────────
+       Three overlapping radial gradients create a soft aurora glow.
+       This page uses green + teal tones to match the Health suite. */
+    .mesh-bg {
+      background-color: #06080f;
+      background-image:
+        radial-gradient(ellipse 65% 50% at 12% 18%, rgba(16,185,129,.12) 0%, transparent 58%),
+        radial-gradient(ellipse 55% 40% at 88% 12%, rgba(20,184,166,.09) 0%, transparent 55%),
+        radial-gradient(ellipse 45% 35% at 55% 88%, rgba(139,92,246,.06) 0%, transparent 52%);
+    }
+
+    /* ── FROSTED GLASS NAVBAR ─────────────────────────────────────────────
+       Blurs everything behind the fixed top navigation bar. */
+    .navbar-glass {
+      background: rgba(6, 8, 15, 0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+
+    /* ── GRADIENT HEADING TEXT ─────────────────────────────────────────────
+       Green-to-teal gradient clipped to the h1 text shape. */
+    .gradient-text {
+      background: linear-gradient(135deg, #34d399 0%, #2dd4bf 50%, #60a5fa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── INPUT FIELD FOCUS STATE ───────────────────────────────────────────
+       Teal glow ring appears when any input or select is clicked. */
+    .input-field:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(45, 212, 191, 0.35);
+      border-color: rgba(45, 212, 191, 0.45);
+    }
+
+    /* ── CUSTOM DROPDOWN ARROW ─────────────────────────────────────────────
+       Replaces the browser's default dropdown arrow with a teal SVG chevron. */
+    .custom-select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%232dd4bf' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 40px;
+    }
+
+    /* ── GENERATE BUTTON ───────────────────────────────────────────────────
+       Green-to-teal gradient with a glow shadow.
+       Slides gradient position on hover for a dynamic feel.
+       :disabled = faded out when API call is in progress. */
+    .btn-generate {
+      background: linear-gradient(135deg, #059669 0%, #0d9488 50%, #0891b2 100%);
+      background-size: 200% 200%;
+      transition: background-position 0.4s ease, opacity 0.2s ease, transform 0.2s ease;
+      box-shadow: 0 4px 24px rgba(13, 148, 136, 0.28);
+    }
+    .btn-generate:hover:not(:disabled) { background-position: right center; transform: translateY(-1px); }
+    .btn-generate:disabled             { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── LOADING SPINNER ───────────────────────────────────────────────────
+       Pure CSS rotating ring, shown inside the button while loading. */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 17px; height: 17px;
+      border: 2px solid rgba(255,255,255,.20);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    /* ── BOUNCING LOADING BARS ─────────────────────────────────────────────
+       Used inside the output panel while the API call is in progress.
+       animate-bounce is a Tailwind utility (0→-8px→0 vertical motion). */
+    @keyframes bounce-custom {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-10px); }
+    }
+
+    /* ── MEAL CARD HOVER ───────────────────────────────────────────────────
+       Subtle brightening effect when hovering over a meal card. */
+    .meal-card { transition: border-color 0.22s ease, box-shadow 0.22s ease; }
+    .meal-card:hover { box-shadow: 0 0 0 1px rgba(45,212,191,0.18); }
+
+    /* ── SCROLLBAR ─────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar       { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0d1117; }
+    ::-webkit-scrollbar-thumb { background: #1a3535; border-radius: 4px; }
+
+    html { scroll-behavior: smooth; }
+  </style>
+</head>
+
+
+<body class="mesh-bg min-h-screen">
+
+
+<!-- ==============================================================================
+     NAVIGATION BAR
+     Fixed at the top of the page. Contains: back button | logo | tool badge.
+     Same structure and glass effect used on every page of this site.
+     ============================================================================== -->
+<nav class="navbar-glass fixed top-0 left-0 right-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+
+      <!-- LEFT: Back button + divider + brand logo -->
+      <div class="flex items-center gap-4">
+
+        <!-- ← Back to homepage: &#8592; is the HTML entity for the left arrow -->
+        <a href="/" class="flex items-center gap-1.5 text-white/45 hover:text-white/85 transition-colors text-sm font-medium group" aria-label="Back to homepage">
+          <span class="group-hover:-translate-x-0.5 transition-transform inline-block">&#8592;</span>
+          <span class="hidden sm:inline">Back</span>
+        </a>
+
+        <!-- Thin vertical separator line -->
+        <div class="w-px h-5 bg-white/10" aria-hidden="true"></div>
+
+        <!-- Brand logo — same inline SVG chip as homepage, teal-tinted for diet page -->
+        <a href="/" class="flex items-center gap-2" aria-label="EasyAIToolz Home">
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="navLg2" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#2dd4bf"/>
+                <stop offset="100%" stop-color="#34d399"/>
+              </linearGradient>
+            </defs>
+            <rect x="2" y="2" width="28" height="28" rx="6" stroke="url(#navLg2)" stroke-width="1.5" fill="rgba(45,212,191,0.07)"/>
+            <rect x="9" y="9" width="14" height="14" rx="3" stroke="url(#navLg2)" stroke-width="1.2" fill="rgba(52,211,153,0.10)"/>
+            <line x1="11" y1="2"  x2="11" y2="5"  stroke="#2dd4bf" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="21" y1="2"  x2="21" y2="5"  stroke="#2dd4bf" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="11" y1="27" x2="11" y2="30" stroke="#2dd4bf" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="21" y1="27" x2="21" y2="30" stroke="#2dd4bf" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="2"  y1="11" x2="5"  y2="11" stroke="#34d399" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="2"  y1="21" x2="5"  y2="21" stroke="#34d399" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="27" y1="11" x2="30" y2="11" stroke="#34d399" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="27" y1="21" x2="30" y2="21" stroke="#34d399" stroke-width="1.2" stroke-linecap="round"/>
+            <circle cx="16" cy="16" r="2.2" fill="url(#navLg2)"/>
+          </svg>
+          <span class="text-[1rem] font-bold leading-none">
+            <span class="text-blue-400">Easy</span><span class="text-purple-400">AI</span><span class="text-pink-400">Toolz</span>
+          </span>
+        </a>
+      </div>
+
+      <!-- RIGHT: Current tool badge -->
+      <span class="hidden sm:flex items-center gap-1.5 bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-semibold px-3 py-1 rounded-full">
+        &#129367; Diet Generator
+      </span>
+
+    </div>
+  </div>
+</nav>
+
+
+<!-- ==============================================================================
+     PAGE HEADER
+     Visible title area below the navbar.
+     pt-28 pushes content down to clear the 64px fixed navbar.
+     ============================================================================== -->
+<header class="pt-28 pb-8 px-4 text-center">
+  <div class="max-w-2xl mx-auto">
+
+    <!-- Breadcrumb trail: shows the user's current location -->
+    <div class="flex items-center justify-center gap-2 text-xs text-white/28 mb-4">
+      <a href="/" class="hover:text-white/55 transition-colors">Home</a>
+      <span>&#8250;</span>
+      <span class="text-white/40">Health &amp; Fitness</span>
+      <span>&#8250;</span>
+      <span class="text-teal-400">Diet Generator</span>
+    </div>
+
+    <!-- h1 = primary SEO heading. Only one h1 per page. -->
+    <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight mb-3">
+      <span class="gradient-text">AI Diet</span>
+      <span class="text-white"> Plan Generator</span>
+    </h1>
+
+    <p class="text-white/50 text-base leading-relaxed max-w-lg mx-auto">
+      Tell us your goal, diet type, and lifestyle &mdash; get a complete daily
+      meal plan with calories and macros, built by AI in seconds. Free, no signup.
+    </p>
+
+  </div>
+</header>
+
+
+<!-- ==============================================================================
+     MAIN WORKSPACE — Two-column interactive layout
+
+     COLUMN LAYOUT:
+     ─────────────────────────────────────────────────────────────
+     MOBILE  (< 1024px)  → 1 column, panels stack vertically
+     DESKTOP (>= 1024px) → 2 columns: 380px fixed left | flex right
+
+     lg:grid-cols-[380px_1fr]
+       = left column is exactly 380px wide
+       = right column takes up all remaining space (1fr = 1 fraction unit)
+     ============================================================================== -->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+  <div class="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 items-start">
+
+
+    <!-- ============================================================
+         LEFT COLUMN: INPUT PANEL
+         Contains all user inputs and the generate button.
+         ============================================================ -->
+    <div class="flex flex-col gap-5">
+
+      <!-- Input card container -->
+      <div class="bg-slate-900/60 border border-white/[.08] rounded-2xl p-6">
+
+        <!-- Panel title -->
+        <h2 class="text-sm font-bold text-white mb-6 flex items-center gap-2">
+          <span class="w-7 h-7 rounded-lg bg-teal-500/15 flex items-center justify-center text-base" aria-hidden="true">&#9881;</span>
+          Your Nutrition Profile
+        </h2>
+
+
+        <!-- ── INPUT 1: DIETARY GOAL ──────────────────────────────────────
+             What outcome does the user want from their eating habits?
+             This is the primary directive passed to the AI nutritionist.
+             Options cover the four most common nutrition goals.
+        -->
+        <div class="mb-5">
+          <label for="goalSelect" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            1. Dietary Goal
+          </label>
+          <select id="goalSelect" class="input-field custom-select w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm transition-colors appearance-none cursor-pointer">
+            <option value="Weight Loss &amp; Fat Reduction">&#128293; Weight Loss &amp; Fat Reduction</option>
+            <option value="Muscle Gain &amp; Body Recomposition">&#128170; Muscle Gain &amp; Body Recomposition</option>
+            <option value="Maintenance &amp; Balanced Eating">&#9878; Maintenance &amp; Balanced Eating</option>
+            <option value="General Health &amp; Clean Living">&#129505; General Health &amp; Clean Living</option>
+            <option value="Athletic Performance &amp; Endurance">&#127939; Athletic Performance &amp; Endurance</option>
+          </select>
+        </div>
+
+
+        <!-- ── INPUT 2: DIET TYPE / RESTRICTIONS ─────────────────────────
+             The AI will ONLY suggest foods that comply with this diet type.
+             e.g., Vegan = no animal products at all.
+             e.g., Keto  = very low carb, high fat.
+        -->
+        <div class="mb-5">
+          <label for="dietTypeSelect" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            2. Diet Type / Restrictions
+          </label>
+          <select id="dietTypeSelect" class="input-field custom-select w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm transition-colors appearance-none cursor-pointer">
+            <option value="Standard / No Restrictions">&#127860; Standard / No Restrictions</option>
+            <option value="Vegetarian (no meat or fish)">&#127807; Vegetarian (no meat or fish)</option>
+            <option value="Vegan (no animal products)">&#127807; Vegan (no animal products)</option>
+            <option value="Halal (no pork, no alcohol)">&#9989; Halal (no pork, no alcohol)</option>
+            <option value="Keto (very low carb, high fat)">&#128293; Keto (very low carb, high fat)</option>
+            <option value="Gluten-Free">&#9940; Gluten-Free</option>
+            <option value="Dairy-Free">&#9940; Dairy-Free</option>
+          </select>
+        </div>
+
+
+        <!-- ── INPUT 3: DAILY ACTIVITY LEVEL ─────────────────────────────
+             Activity level determines how many calories the plan should target.
+             Sedentary = desk job, little exercise → lower calorie plan.
+             Very Active = intense daily workouts → higher calorie plan.
+        -->
+        <div class="mb-5">
+          <label for="activitySelect" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            3. Daily Activity Level
+          </label>
+          <select id="activitySelect" class="input-field custom-select w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm transition-colors appearance-none cursor-pointer">
+            <option value="Sedentary (desk job, little to no exercise)">&#128188; Sedentary (desk job, little exercise)</option>
+            <option value="Lightly Active (light exercise 1-3 days/week)" selected>&#128694; Lightly Active (1-3 days/week)</option>
+            <option value="Moderately Active (moderate exercise 3-5 days/week)">&#127939; Moderately Active (3-5 days/week)</option>
+            <option value="Very Active (hard exercise 6-7 days/week)">&#9889; Very Active (6-7 days/week)</option>
+          </select>
+        </div>
+
+
+        <!-- ── INPUT 4: ALLERGIES / DISLIKED FOODS ───────────────────────
+             A free-text field where users type anything they want excluded.
+             Examples: "no peanuts", "no seafood, no dairy", "hate broccoli"
+             This is a regular <input type="text">, NOT a <textarea>,
+             because it's a short one-line entry.
+        -->
+        <div class="mb-7">
+          <label for="exclusionsInput" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
+            4. Allergies / Foods to Avoid
+            <span class="text-white/20 normal-case font-normal tracking-normal">(optional)</span>
+          </label>
+          <input
+            type="text"
+            id="exclusionsInput"
+            placeholder="e.g., No peanuts, no seafood, dislike mushrooms..."
+            class="input-field w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm placeholder-white/20 transition-colors"
+          />
+          <!-- Small hint text below the input -->
+          <p class="text-xs text-white/22 mt-1.5 leading-relaxed">Separate multiple items with commas</p>
+        </div>
+
+
+        <!-- ── GENERATE BUTTON ────────────────────────────────────────────
+             onclick="generateDietPlan()" — calls the main JS function.
+             id="generateBtn" — JS disables this button while the API is running.
+             id="btnText" and id="btnIcon" — JS changes these to show loading state.
+        -->
+        <button
+          id="generateBtn"
+          onclick="generateDietPlan()"
+          class="btn-generate w-full text-white font-bold py-4 rounded-xl text-base flex items-center justify-center gap-2.5 tracking-wide"
+        >
+          <span id="btnIcon" aria-hidden="true">&#8594;</span>
+          <span id="btnText">Generate My Diet Plan</span>
+        </button>
+
+      </div><!-- end input card -->
+
+
+      <!-- HOW IT WORKS info box -->
+      <div class="bg-teal-500/5 border border-teal-500/15 rounded-xl p-4">
+        <p class="text-xs font-bold text-teal-400/75 mb-3 uppercase tracking-widest">How It Works</p>
+        <ol class="text-xs text-white/35 space-y-2 list-decimal list-inside leading-relaxed">
+          <li>Set your dietary goal and any restrictions above</li>
+          <li>Click Generate &mdash; AI creates your personalized plan</li>
+          <li>View your Breakfast, Lunch, Dinner, and Snacks as cards</li>
+          <li>See estimated calories and macros per meal</li>
+          <li>Copy the full plan to save or share it</li>
+        </ol>
+      </div>
+
+      <!-- Disclaimer -->
+      <div class="bg-amber-500/5 border border-amber-500/15 rounded-xl p-4">
+        <p class="text-xs text-amber-400/65 leading-relaxed">
+          <span class="font-bold">&#9888; Medical Note:</span> This AI-generated plan is for informational purposes only. Calorie needs vary by individual. Consult a registered dietitian or doctor before making major dietary changes.
+        </p>
+      </div>
+
+    </div><!-- end left column -->
+
+
+    <!-- ============================================================
+         RIGHT COLUMN: OUTPUT PANEL
+         lg:sticky lg:top-24 = stays in the viewport as you scroll down.
+
+         States this panel can be in:
+           1. Empty state  — shown before any plan is generated
+           2. Loading state — shown while AI is working
+           3. Result state  — rendered meal cards after AI responds
+         All state changes are handled entirely by JavaScript.
+         ============================================================ -->
+    <div class="flex flex-col gap-4 lg:sticky lg:top-24">
+
+      <!-- Output panel wrapper card -->
+      <div class="bg-slate-900/60 border border-white/[.08] rounded-2xl overflow-hidden">
+
+        <!-- Panel title bar -->
+        <div class="flex items-center justify-between px-5 py-4 border-b border-white/[.06]" style="background:rgba(255,255,255,0.025)">
+          <div class="flex items-center gap-2.5">
+            <!-- Pulsing teal dot = "live/active" indicator -->
+            <span class="w-2 h-2 rounded-full bg-teal-500 animate-pulse" aria-hidden="true"></span>
+            <h2 class="text-sm font-semibold text-white/80">Your Daily Meal Plan</h2>
+          </div>
+
+          <!-- COPY PLAN BUTTON
+               Hidden (class="hidden") by default.
+               JavaScript removes the "hidden" class after a plan is generated.
+               onclick="copyDietPlan()" copies the raw plan text to clipboard.
+          -->
+          <button
+            id="copyBtn"
+            onclick="copyDietPlan()"
+            class="hidden items-center gap-1.5 text-xs text-white/38 hover:text-teal-400 px-3 py-1.5 rounded-lg border border-white/[.08] hover:border-teal-500/30 transition-all"
+          >
+            <span>&#128203;</span>
+            <span>Copy Plan</span>
+          </button>
+        </div>
+
+
+        <!-- ── OUTPUT BOX ─────────────────────────────────────────────────
+             id="outputBox" — this is the div that JavaScript targets.
+             Initially shows the empty state UI below.
+             When AI responds, JavaScript replaces all of this with meal cards.
+
+             max-height + overflow-y-auto = scrollable if plan is very long.
+        -->
+        <div id="outputBox" class="p-5 overflow-y-auto" style="min-height: 520px; max-height: 72vh;">
+
+          <!-- ── EMPTY STATE ─────────────────────────────────────────────
+               Shown before the user has generated anything.
+               This entire block is replaced by JavaScript after the AI responds.
+          -->
+          <div class="flex flex-col items-center justify-center py-16 gap-5 text-center">
+
+            <!-- Large food emoji icon in a styled box -->
+            <div class="w-20 h-20 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-4xl">
+              &#129367;
+            </div>
+
+            <div>
+              <p class="text-white/50 font-semibold mb-1.5">Your meal plan will appear here</p>
+              <p class="text-white/25 text-sm max-w-xs leading-relaxed">
+                Configure your nutrition profile on the left and click
+                <span class="text-teal-400/70 font-medium">Generate My Diet Plan</span>
+              </p>
+            </div>
+
+            <!-- Skeleton preview cards — show what the output will look like -->
+            <div class="w-full max-w-sm mt-2 space-y-3 opacity-25 pointer-events-none select-none">
+
+              <!-- Breakfast skeleton -->
+              <div class="rounded-xl border border-amber-500/30 bg-slate-800/50 overflow-hidden">
+                <div class="px-4 py-2.5 bg-amber-500/10 border-b border-white/5 flex items-center gap-2">
+                  <span class="text-sm">&#9728;</span>
+                  <span class="text-xs font-bold text-amber-400/80 uppercase tracking-wide">Breakfast</span>
+                </div>
+                <div class="px-4 py-3 space-y-2">
+                  <div class="h-2.5 bg-white/10 rounded-full w-4/5"></div>
+                  <div class="h-2.5 bg-white/10 rounded-full w-3/5"></div>
+                  <div class="h-2.5 bg-white/8 rounded-full w-2/3"></div>
+                </div>
+              </div>
+
+              <!-- Lunch skeleton -->
+              <div class="rounded-xl border border-emerald-500/30 bg-slate-800/50 overflow-hidden">
+                <div class="px-4 py-2.5 bg-emerald-500/10 border-b border-white/5 flex items-center gap-2">
+                  <span class="text-sm">&#127869;</span>
+                  <span class="text-xs font-bold text-emerald-400/80 uppercase tracking-wide">Lunch</span>
+                </div>
+                <div class="px-4 py-3 space-y-2">
+                  <div class="h-2.5 bg-white/10 rounded-full w-3/4"></div>
+                  <div class="h-2.5 bg-white/10 rounded-full w-1/2"></div>
+                </div>
+              </div>
+
+              <!-- Dinner skeleton -->
+              <div class="rounded-xl border border-indigo-500/30 bg-slate-800/50 overflow-hidden">
+                <div class="px-4 py-2.5 bg-indigo-500/10 border-b border-white/5 flex items-center gap-2">
+                  <span class="text-sm">&#127761;</span>
+                  <span class="text-xs font-bold text-indigo-400/80 uppercase tracking-wide">Dinner</span>
+                </div>
+                <div class="px-4 py-3 space-y-2">
+                  <div class="h-2.5 bg-white/10 rounded-full w-5/6"></div>
+                  <div class="h-2.5 bg-white/10 rounded-full w-2/3"></div>
+                </div>
+              </div>
+
+            </div><!-- end skeleton preview -->
+
+          </div><!-- end empty state -->
+
+        </div><!-- end outputBox -->
+
+      </div><!-- end output panel card -->
+
+    </div><!-- end right column -->
+
+  </div><!-- end two-column grid -->
+</main>
+
+
+<!-- ==============================================================================
+     FOOTER
+     ============================================================================== -->
+<footer class="border-t border-white/[.05] py-6">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+      <span class="text-sm font-bold">
+        <span class="text-blue-400">Easy</span><span class="text-purple-400">AI</span><span class="text-pink-400">Toolz</span>
+        <span class="text-white/18 font-normal text-xs ml-2">&mdash; Health &amp; Fitness Suite</span>
+      </span>
+      <div class="flex items-center gap-3 text-xs text-white/22">
+        <a href="/fitness/workout-generator.html" class="hover:text-white/55 transition-colors">&#8592; Workout Generator</a>
+        <span>|</span>
+        <a href="/" class="hover:text-white/55 transition-colors">All Tools &#8594;</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+<!-- ==============================================================================
+     JAVASCRIPT — The diet_logic.js file is embedded here at build time.
+     Placed at bottom of body so all HTML elements exist before JS runs.
+     ============================================================================== -->
+<script>
+// ============================================================
+// diet_logic.js
+// JavaScript for the AI Diet Plan Generator
+// Built into diet-generator.html at build time
+// ============================================================
+
+
+// ─── FUNCTION 1: generateDietPlan ────────────────────────────────────────────
+// The main function. Runs when the user clicks "Generate My Diet Plan".
+//
+// FULL DATA FLOW:
+//   Step 1: Read all 3 dropdown values + the allergy text input
+//   Step 2: Build a structured AI system prompt from those values
+//   Step 3: Set the UI to a loading state (spinner, disabled button)
+//   Step 4: POST the prompt to /api/generate (our secure backend)
+//   Step 5: Wait for the AI response (usually 3-6 seconds)
+//   Step 6: Parse the AI text and render it as beautiful meal cards
+//   Step 7: Re-enable the button so the user can generate again
+async function generateDietPlan() {
+
+  // ── STEP 1: Read all input values ───────────────────────────────────────
+  // getElementById() finds an element using its id="..." attribute.
+  // .value reads the currently selected dropdown option or typed text.
+  var goal       = document.getElementById('goalSelect').value;
+  var dietType   = document.getElementById('dietTypeSelect').value;
+  var activity   = document.getElementById('activitySelect').value;
+  var exclusions = document.getElementById('exclusionsInput').value.trim();
+
+  // If the user left the allergy field blank, use a sensible default
+  var exclusionsText = exclusions || 'None specified';
+
+  // ── STEP 2: Build the AI System Prompt ──────────────────────────────────
+  // We wrap the user's 4 inputs in expert nutritionist instructions.
+  // The AI is told EXACTLY how to format its response (BREAKFAST:, LUNCH:, etc.)
+  // so our renderMealCards() function can parse and display it as cards.
+  var systemPrompt =
+    'You are a certified elite nutritionist with 15 years of clinical experience. ' +
+    'Create a detailed, optimized, and realistic full-day meal plan for a client based on:\n' +
+    '- Dietary Goal: ' + goal + '\n' +
+    '- Diet Type / Restriction: ' + dietType + '\n' +
+    '- Daily Activity Level: ' + activity + '\n' +
+    '- Food Allergies / Exclusions: ' + exclusionsText + '\n\n' +
+    'STRICT OUTPUT FORMAT — follow this EXACTLY:\n' +
+    'Use these EXACT headers on their own line, in this order:\n' +
+    'BREAKFAST:\n' +
+    'MID-MORNING SNACK:\n' +
+    'LUNCH:\n' +
+    'AFTERNOON SNACK:\n' +
+    'DINNER:\n' +
+    'DAILY TOTALS:\n\n' +
+    'Under each header, list:\n' +
+    '- Each food item on its own line starting with a dash (-)\n' +
+    '- Include portion size (e.g., "1 cup", "100g", "2 slices")\n' +
+    '- Estimated calories in parentheses at the end of each item\n' +
+    '- After all items, add one line: Meal Calories: ~XXX kcal\n' +
+    '- After all items, add one line: Macros: Protein Xg | Carbs Xg | Fat Xg\n\n' +
+    'Under DAILY TOTALS include Total Calories, Total Protein, Total Carbs, Total Fat.\n' +
+    'Do NOT include any introduction, conclusion, or conversational text. Output ONLY the meal plan.';
+
+  // ── STEP 3: Set the UI to a Loading State ───────────────────────────────
+  var btn       = document.getElementById('generateBtn');
+  var btnText   = document.getElementById('btnText');
+  var btnIcon   = document.getElementById('btnIcon');
+  var outputBox = document.getElementById('outputBox');
+  var copyBtn   = document.getElementById('copyBtn');
+
+  btn.disabled        = true;
+  btnText.textContent = 'Creating Your Plan...';
+  btnIcon.innerHTML   = '<span class="spinner"></span>';
+  copyBtn.classList.add('hidden'); // hide copy button until results arrive
+
+  // Show an animated loading state in the output panel
+  outputBox.innerHTML =
+    '<div class="flex flex-col items-center justify-center py-16 gap-4">' +
+      '<div class="flex gap-2 items-end">' +
+        '<div class="w-2 h-6 bg-green-500/60 rounded-full animate-bounce" style="animation-delay:0ms"></div>' +
+        '<div class="w-2 h-9 bg-emerald-400/60 rounded-full animate-bounce" style="animation-delay:150ms"></div>' +
+        '<div class="w-2 h-6 bg-teal-400/60 rounded-full animate-bounce" style="animation-delay:300ms"></div>' +
+      '</div>' +
+      '<p class="text-white/40 text-sm">Calculating your personalized nutrition plan...</p>' +
+      '<p class="text-white/22 text-xs">Analyzing your goal, diet type, and activity level</p>' +
+    '</div>';
+
+  // ── STEP 4 + 5: POST to the backend and wait ────────────────────────────
+  // fetch() is JavaScript's built-in HTTP client.
+  // "await" pauses execution here until the server responds.
+  // try/catch catches any network errors so the page doesn't crash.
+  try {
+
+    var response = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: systemPrompt })
+      // JSON.stringify({ prompt: "..." }) converts our JS object to a JSON string:
+      // Result: '{"prompt":"You are a certified elite nutritionist..."}'
+    });
+
+    // Parse the JSON that the backend sends back
+    var data = await response.json();
+
+    // ── STEP 6: Render the result ─────────────────────────────────────────
+    if (data.result) {
+      renderMealCards(data.result.trim(), goal, dietType);
+      copyBtn.classList.remove('hidden'); // show copy button
+    } else {
+      showDietError('AI Error: ' + (data.error || 'Unknown error. Please try again.'));
+    }
+
+  } catch(err) { console.error(err); }
+
+  // ── STEP 7: Reset the button ─────────────────────────────────────────────
+  btn.disabled        = false;
+  btnText.textContent = 'Generate My Diet Plan';
+  btnIcon.textContent = '\u2192'; // → right arrow
+}
+
+
+// ─── FUNCTION 2: renderMealCards ─────────────────────────────────────────────
+// Parses the AI text response and renders each meal as a styled card.
+//
+// HOW PARSING WORKS:
+//   The AI was instructed to use exact headers like "BREAKFAST:", "LUNCH:", etc.
+//   We split the text at those known headers using a regular expression.
+//   Each chunk becomes one meal card with its own color and icon.
+//
+// Parameters:
+//   planText  — the raw text from the AI
+//   goal      — dietary goal (shown in the summary header)
+//   dietType  — diet type (shown in the summary header)
+function renderMealCards(planText, goal, dietType) {
+
+  var outputBox = document.getElementById('outputBox');
+
+  // Store full text for the copy function
+  window._currentDietText = planText;
+
+  // ── Define each meal section: its label, icon, and color theme ─────────
+  // We look for each of these headers in the AI response text.
+  var mealSections = [
+    { key: 'BREAKFAST',          label: 'Breakfast',            icon: '&#9728;',   color: 'amber',   gradient: 'from-amber-500/10' },
+    { key: 'MID-MORNING SNACK',  label: 'Mid-Morning Snack',    icon: '&#127822;', color: 'orange',  gradient: 'from-orange-500/10' },
+    { key: 'LUNCH',              label: 'Lunch',                icon: '&#127869;', color: 'emerald', gradient: 'from-emerald-500/10' },
+    { key: 'AFTERNOON SNACK',    label: 'Afternoon Snack',      icon: '&#127823;', color: 'teal',    gradient: 'from-teal-500/10' },
+    { key: 'DINNER',             label: 'Dinner',               icon: '&#127761;', color: 'indigo',  gradient: 'from-indigo-500/10' },
+    { key: 'DAILY TOTALS',       label: 'Daily Totals',         icon: '&#128200;', color: 'purple',  gradient: 'from-purple-500/10' },
+  ];
+
+  // ── Color map: tailwind classes for each meal's color theme ─────────────
+  // We can't use dynamic class names in Tailwind (they must be in the source),
+  // so we use a lookup map with the full class strings.
+  var colorMap = {
+    amber:   { border: 'border-amber-500/25',   header: 'text-amber-400',   bg: 'bg-amber-500/8',   dot: 'bg-amber-400'   },
+    orange:  { border: 'border-orange-500/25',  header: 'text-orange-400',  bg: 'bg-orange-500/8',  dot: 'bg-orange-400'  },
+    emerald: { border: 'border-emerald-500/25', header: 'text-emerald-400', bg: 'bg-emerald-500/8', dot: 'bg-emerald-400' },
+    teal:    { border: 'border-teal-500/25',    header: 'text-teal-400',    bg: 'bg-teal-500/8',    dot: 'bg-teal-400'    },
+    indigo:  { border: 'border-indigo-500/25',  header: 'text-indigo-400',  bg: 'bg-indigo-500/8',  dot: 'bg-indigo-400'  },
+    purple:  { border: 'border-purple-500/25',  header: 'text-purple-400',  bg: 'bg-purple-500/8',  dot: 'bg-purple-400'  },
+  };
+
+  // ── Split planText into sections at each known header ───────────────────
+  // We build a list of {header, content} objects from the raw AI text.
+  // Strategy: find the position of each known header, then extract the text
+  // between each header and the next one.
+  var found = [];
+  mealSections.forEach(function(section) {
+    // Create a regex that matches "HEADER:" at the start of a line (case-insensitive)
+    var regex = new RegExp('(^|\\n)' + section.key + '\\s*:', 'i');
+    var match = planText.search(regex);
+    if (match !== -1) {
+      found.push({ section: section, startIndex: match });
+    }
+  });
+
+  // Sort found sections by their position in the text
+  found.sort(function(a, b) { return a.startIndex - b.startIndex; });
+
+  // If the AI didn't follow format at all, show plain text fallback
+  if (found.length === 0) {
+    outputBox.innerHTML =
+      '<div class="p-4">' +
+        '<pre class="whitespace-pre-wrap text-sm text-white/65 leading-relaxed">' +
+        escapeHTML(planText) + '</pre>' +
+      '</div>';
+    return;
+  }
+
+  // Extract the text content for each found section
+  var parsedSections = found.map(function(item, idx) {
+    var nextStart = (idx + 1 < found.length) ? found[idx + 1].startIndex : planText.length;
+    var rawContent = planText.slice(item.startIndex, nextStart);
+    // Remove the header line itself, keep only the content
+    var contentLines = rawContent.split('\n').filter(function(line, i) {
+      if (i === 0) return false; // skip the header line
+      return line.trim().length > 0;
+    });
+    return { section: item.section, lines: contentLines };
+  });
+
+  // ── Build the summary header ────────────────────────────────────────────
+  var summaryHTML =
+    '<div class="mb-5 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 flex flex-wrap items-center gap-3">' +
+      '<span class="text-2xl">&#129367;</span>' +
+      '<div>' +
+        '<p class="text-sm font-bold text-white">' + escapeHTML(goal) + ' &mdash; ' + escapeHTML(dietType) + '</p>' +
+        '<p class="text-xs text-white/38">Full-day meal plan &middot; Generated by AI nutritionist</p>' +
+      '</div>' +
+    '</div>';
+
+  // ── Render each section as a meal card ─────────────────────────────────
+  var cardsHTML = parsedSections.map(function(item) {
+    var colors = colorMap[item.section.color] || colorMap.emerald;
+    var isDailyTotals = item.section.key === 'DAILY TOTALS';
+
+    // Build the list items
+    var lineItems = item.lines.map(function(line) {
+      var trimLine = line.trim();
+      if (!trimLine) return '';
+
+      // Check if this is a "Meal Calories:" or "Macros:" or "Total" summary line
+      var isSummaryLine = /^(meal\s+calories|macros|total\s+(calories|protein|carbs|fat)|daily\s+total)/i.test(trimLine);
+
+      if (isSummaryLine) {
+        // Render summary lines with a highlighted pill background
+        return '<div class="mt-3 px-3 py-2 rounded-lg bg-white/5 border border-white/8 text-xs text-white/65 font-medium">' +
+               escapeHTML(trimLine) + '</div>';
+      }
+
+      // Check if it's a dash-item (food item)
+      var isDashItem = trimLine.startsWith('-');
+      if (isDashItem) {
+        var cleanLine = trimLine.replace(/^-\s*/, '');
+        // Try to highlight the calorie value in parentheses (e.g., "(250 kcal)")
+        var withHighlight = cleanLine.replace(
+          /\((\~?\d+\s*kcal[^)]*)\)/gi,
+          '<span class="text-white/38 text-xs">($1)</span>'
+        );
+        return '<li class="flex items-start gap-2 py-1.5 border-b border-white/[.04] last:border-0">' +
+               '<span class="' + colors.dot + ' w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0"></span>' +
+               '<span class="text-sm text-white/68 leading-relaxed">' + withHighlight + '</span>' +
+               '</li>';
+      }
+
+      // Any other line — render as plain text
+      return '<li class="text-xs text-white/40 py-0.5">' + escapeHTML(trimLine) + '</li>';
+
+    }).join('');
+
+    return '<div class="mb-4 rounded-xl border ' + colors.border + ' bg-slate-900/60 overflow-hidden transition-colors hover:border-opacity-60">' +
+      '<div class="flex items-center gap-3 px-4 py-3 border-b border-white/[.05]" style="background:rgba(255,255,255,0.025)">' +
+        '<span class="text-lg" aria-hidden="true">' + item.section.icon + '</span>' +
+        '<h3 class="font-bold text-sm ' + colors.header + ' uppercase tracking-wide">' +
+          escapeHTML(item.section.label) +
+        '</h3>' +
+        (isDailyTotals ? '<span class="ml-auto text-xs bg-purple-500/15 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded-full font-semibold">Summary</span>' : '') +
+      '</div>' +
+      '<div class="px-4 py-3">' +
+        '<ul class="space-y-0">' + lineItems + '</ul>' +
+      '</div>' +
+    '</div>';
+
+  }).join('');
+
+  outputBox.innerHTML = summaryHTML + cardsHTML;
+}
+
+
+// ─── FUNCTION 3: showDietError ────────────────────────────────────────────────
+// Shows a friendly error message in the output box.
+function showDietError(message) {
+  document.getElementById('outputBox').innerHTML =
+    '<div class="flex flex-col gap-3 m-2 p-5 rounded-xl border border-red-500/20 bg-red-500/5">' +
+      '<div class="flex items-center gap-2 text-red-400">' +
+        '<span class="text-lg">&#9888;</span>' +
+        '<span class="font-semibold text-sm">Something went wrong</span>' +
+      '</div>' +
+      '<pre class="text-xs text-white/45 whitespace-pre-wrap leading-relaxed">' +
+        escapeHTML(message) +
+      '</pre>' +
+      '<button onclick="generateDietPlan()" class="self-start text-xs bg-white/5 hover:bg-white/10 border border-white/10 text-white/55 px-4 py-2 rounded-lg transition-colors">' +
+        'Try Again' +
+      '</button>' +
+    '</div>';
+}
+
+
+// ─── FUNCTION 4: copyDietPlan ─────────────────────────────────────────────────
+// Copies the raw meal plan text to the user's clipboard.
+async function copyDietPlan() {
+  var textToCopy = window._currentDietText;
+  if (!textToCopy) return;
+
+  try {
+    await navigator.clipboard.writeText(textToCopy);
+
+    var btn      = document.getElementById('copyBtn');
+    var origHTML = btn.innerHTML;
+    btn.innerHTML = '<span>\u2713</span><span>Copied!</span>';
+    btn.classList.add('text-emerald-400');
+
+    setTimeout(function() {
+      btn.innerHTML = origHTML;
+      btn.classList.remove('text-emerald-400');
+    }, 2000); // revert after 2 seconds
+
+  } catch (e) {
+    // Fallback: select all text visually if clipboard API is blocked
+    var range = document.createRange();
+    range.selectNode(document.getElementById('outputBox'));
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+  }
+}
+
+
+// ─── HELPER: escapeHTML ───────────────────────────────────────────────────────
+// Converts special HTML characters to safe text entities.
+// This prevents XSS (Cross-Site Scripting) — if the AI response contained
+// any <script> tags, this function turns them into &lt;script&gt; text.
+// ALWAYS escape untrusted text before inserting it into innerHTML.
+function escapeHTML(str) {
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(String(str)));
+  return div.innerHTML;
+}
+
+</script>
+
+<script src="/assets/js/antigravity-core.js"></script>
+</body>
+</html>

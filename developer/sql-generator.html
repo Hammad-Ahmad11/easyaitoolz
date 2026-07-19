@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<!--
+  FILE     : /developer/sql-generator.html
+  WEBSITE  : easyaitoolz.com
+  PURPOSE  : AI-powered SQL Query Generator — converts plain English to SQL
+  TECH     : HTML5 + Tailwind CSS CDN + Vanilla JavaScript
+
+  HOW THIS PAGE WORKS:
+  =====================
+  1. User selects SQL dialect (MySQL, PostgreSQL, SQL Server, Oracle, SQLite)
+  2. User types their data request in plain English
+  3. User clicks "Generate SQL Query" (or presses Ctrl+Enter)
+  4. JavaScript wraps the input in a strict AI system prompt
+  5. A POST request is sent to /api/generate (our secure Cloudflare backend)
+  6. The backend calls Google Gemini with the secret API key (never exposed)
+  7. The returned SQL code appears in the terminal output box on the right
+-->
+<html lang="en">
+
+
+<!-- ==================================================================
+     HEAD — Setup: fonts, Tailwind, custom CSS (nothing visible here)
+     ================================================================== -->
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI SQL Query Generator &mdash; EasyAIToolz</title>
+  <meta name="description" content="Generate optimized SQL queries instantly from plain English. Supports MySQL, PostgreSQL, SQL Server, Oracle, and SQLite. Free, no signup." />
+
+  <!-- Google Fonts: Inter (UI text) + JetBrains Mono (code output terminal) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN: gives us utility classes like bg-slate-900, text-blue-400 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Extend Tailwind: register our custom fonts as the defaults -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* ── BASE ──────────────────────────────────────────────────────────────
+       Same dark background as the homepage for visual consistency. */
+    body {
+      background-color: #06080f;
+      font-family: 'Inter', sans-serif;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+
+    /* ── MESH GRADIENT BACKGROUND ──────────────────────────────────────────
+       Three layered radial gradients create a soft "aurora" glow effect.
+       Each gradient is a colored ellipse fading to transparent. */
+    .mesh-bg {
+      background-color: #06080f;
+      background-image:
+        radial-gradient(ellipse 70% 50% at 15% 20%, rgba(56,100,255,.13) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 85% 15%, rgba(139,92,246,.10) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 30% at 50% 90%, rgba(236,72,153,.06) 0%, transparent 50%);
+    }
+
+    /* ── FROSTED GLASS NAVBAR ──────────────────────────────────────────────
+       backdrop-filter: blur blurs all content BEHIND the navbar element. */
+    .navbar-glass {
+      background: rgba(6, 8, 15, 0.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+
+    /* ── GRADIENT TEXT ─────────────────────────────────────────────────────
+       Clips a blue-to-purple gradient to the text boundary. */
+    .gradient-text {
+      background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 60%, #f472b6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ── INPUT FOCUS RING ──────────────────────────────────────────────────
+       A soft blue glow ring appears when the user clicks any input/select. */
+    .input-field:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.40);
+      border-color: rgba(96, 165, 250, 0.50);
+    }
+
+    /* ── TERMINAL OUTPUT BOX ───────────────────────────────────────────────
+       Styled to look like a real code editor / terminal window.
+       JetBrains Mono is a monospace font designed for reading code. */
+    .terminal-box {
+      background: #0d1117;
+      border: 1px solid rgba(255,255,255,.08);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      color: #7dd3fc;          /* sky blue — classic terminal text color */
+      white-space: pre-wrap;   /* preserves newlines and indentation in SQL */
+      word-break: break-word;
+    }
+
+    /* ── GENERATE BUTTON ───────────────────────────────────────────────────
+       Eye-catching gradient button. Glows blue on hover.
+       :disabled = grayed out while the API call is in progress. */
+    .btn-generate {
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      box-shadow: 0 4px 20px rgba(37, 99, 235, 0.35);
+    }
+    .btn-generate:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+    .btn-generate:disabled             { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── COPY BUTTON ───────────────────────────────────────────────────────
+       Small button in the terminal title bar. Lights up blue on hover. */
+    .btn-copy { transition: background 0.2s ease, color 0.2s ease; }
+    .btn-copy:hover { background: rgba(96,165,250,.15); color: #93c5fd; }
+
+    /* ── LOADING SPINNER ───────────────────────────────────────────────────
+       CSS-only rotating ring shown while the API call is in progress.
+       @keyframes spin defines a 360-degree rotation animation. */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 17px; height: 17px;
+      border: 2px solid rgba(255,255,255,.20);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    /* ── CUSTOM SCROLLBARS ─────────────────────────────────────────────────
+       Thin, dark scrollbars that match the dark theme. */
+    ::-webkit-scrollbar       { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0d1117; }
+    ::-webkit-scrollbar-thumb { background: #2d3748; border-radius: 4px; }
+
+    html { scroll-behavior: smooth; }
+  </style>
+</head>
+
+
+<!-- ==================================================================
+     BODY — Everything the user sees on screen
+     ================================================================== -->
+<body class="mesh-bg min-h-screen">
+
+
+<!-- ==================================================================
+     NAVIGATION BAR
+     Same design as the homepage for consistent branding.
+     Has a back-arrow button and the EasyAIToolz logo.
+     fixed top-0 z-50 = always visible, stays at the top when scrolling.
+     ================================================================== -->
+<nav class="navbar-glass fixed top-0 left-0 right-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+
+      <!-- LEFT: Back button + divider + logo -->
+      <div class="flex items-center gap-4">
+
+        <!-- Back to homepage: href="/" navigates to index.html.
+             &#8592; = HTML entity for left arrow: <- -->
+        <a href="/" class="flex items-center gap-1.5 text-white/45 hover:text-white/85 transition-colors text-sm font-medium group" aria-label="Back to homepage">
+          <span class="group-hover:-translate-x-0.5 transition-transform inline-block">&#8592;</span>
+          <span class="hidden sm:inline">Back</span>
+        </a>
+
+        <!-- Thin vertical line divider between back button and logo -->
+        <div class="w-px h-5 bg-white/10" aria-hidden="true"></div>
+
+        <!-- Brand logo (identical SVG to homepage) -->
+        <a href="/" class="flex items-center gap-2" aria-label="EasyAIToolz Home">
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="lg1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#60a5fa"/>
+                <stop offset="100%" stop-color="#a78bfa"/>
+              </linearGradient>
+            </defs>
+            <rect x="2" y="2" width="28" height="28" rx="6" stroke="url(#lg1)" stroke-width="1.5" fill="rgba(96,165,250,0.07)"/>
+            <rect x="9" y="9" width="14" height="14" rx="3" stroke="url(#lg1)" stroke-width="1.2" fill="rgba(167,139,250,0.10)"/>
+            <line x1="11" y1="2"  x2="11" y2="5"  stroke="#60a5fa" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="21" y1="2"  x2="21" y2="5"  stroke="#60a5fa" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="11" y1="27" x2="11" y2="30" stroke="#60a5fa" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="21" y1="27" x2="21" y2="30" stroke="#60a5fa" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="2"  y1="11" x2="5"  y2="11" stroke="#a78bfa" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="2"  y1="21" x2="5"  y2="21" stroke="#a78bfa" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="27" y1="11" x2="30" y2="11" stroke="#a78bfa" stroke-width="1.2" stroke-linecap="round"/>
+            <line x1="27" y1="21" x2="30" y2="21" stroke="#a78bfa" stroke-width="1.2" stroke-linecap="round"/>
+            <circle cx="16" cy="16" r="2.2" fill="url(#lg1)"/>
+          </svg>
+          <span class="text-[1rem] font-bold leading-none">
+            <span class="text-blue-400">Easy</span><span class="text-purple-400">AI</span><span class="text-pink-400">Toolz</span>
+          </span>
+        </a>
+
+      </div>
+
+      <!-- RIGHT: Current tool badge -->
+      <span class="hidden sm:flex items-center gap-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold px-3 py-1 rounded-full">
+        &#128196; SQL Generator
+      </span>
+
+    </div>
+  </div>
+</nav>
+
+
+<!-- ==================================================================
+     PAGE HEADER
+     Short title section below the navbar, above the workspace.
+     pt-28 = top padding so content clears the 64px fixed navbar.
+     ================================================================== -->
+<header class="pt-28 pb-8 px-4 text-center">
+  <div class="max-w-2xl mx-auto">
+
+    <!-- Breadcrumb trail: Home > Developer Suite > SQL Generator -->
+    <div class="flex items-center justify-center gap-2 text-xs text-white/30 mb-4">
+      <a href="/" class="hover:text-white/60 transition-colors">Home</a>
+      <span aria-hidden="true">&#8250;</span>
+      <span class="text-white/45">Developer Suite</span>
+      <span aria-hidden="true">&#8250;</span>
+      <span class="text-blue-400">SQL Generator</span>
+    </div>
+
+    <!-- Main page heading: h1 = most important heading for SEO -->
+    <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight mb-3">
+      <span class="gradient-text">AI SQL</span>
+      <span class="text-white"> Query Generator</span>
+    </h1>
+
+    <!-- Tool description -->
+    <p class="text-white/55 text-base leading-relaxed max-w-lg mx-auto">
+      Describe what you need in plain English &mdash; get a clean, production-ready SQL query instantly.
+      Supports MySQL, PostgreSQL, SQL Server, Oracle, and SQLite.
+    </p>
+
+  </div>
+</header>
+
+
+<!-- ==================================================================
+     MAIN WORKSPACE — The two-column interactive tool area
+     ================================================================== -->
+<!--
+  TWO-COLUMN LAYOUT EXPLAINED:
+  =============================
+  On desktop (lg = 1024px+ wide screens):
+    - Left column  = Input controls (dialect dropdown + prompt textarea)
+    - Right column = Output terminal (the generated SQL code)
+  On mobile (< 1024px):
+    - Both columns stack vertically (left on top, right on bottom)
+
+  grid-cols-1    = 1 column on mobile
+  lg:grid-cols-2 = 2 equal columns on desktop
+  gap-6          = 24px gap between columns
+  items-start    = both columns start at the top (don't stretch to equal height)
+-->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+
+
+    <!-- ==============================================================
+         LEFT COLUMN: INPUT PANEL
+         Contains all the controls the user interacts with:
+           1. SQL dialect dropdown
+           2. Plain English prompt textarea
+           3. Quick example chips
+           4. Generate button
+           5. How It Works info box
+         ============================================================== -->
+    <div class="flex flex-col gap-5">
+
+      <!-- Input card: dark semi-transparent box -->
+      <div class="bg-slate-900/60 border border-white/[.08] rounded-2xl p-6">
+
+        <!-- Panel title with a small icon -->
+        <h2 class="text-sm font-semibold text-white mb-5 flex items-center gap-2">
+          <span class="w-7 h-7 rounded-lg bg-blue-500/15 flex items-center justify-center text-base" aria-hidden="true">&#9998;</span>
+          Describe Your Request
+        </h2>
+
+
+        <!-- INPUT 1: SQL DIALECT DROPDOWN
+             ================================
+             A <select> element lets the user choose their SQL database flavor.
+             The selected dialect is passed to the AI system prompt so the AI
+             generates syntax specific to that database engine.
+
+             Different databases have subtle SQL differences:
+               MySQL      = most common web database, uses LIMIT for paging
+               PostgreSQL = advanced open-source, uses ILIKE for case-insensitive search
+               SQL Server = Microsoft's enterprise DB, uses TOP instead of LIMIT
+               Oracle     = large enterprise DB, uses ROWNUM for row limiting
+               SQLite     = lightweight embedded DB, perfect for mobile/desktop apps
+        -->
+        <div class="mb-5">
+          <label for="dialectSelect" class="block text-xs font-semibold text-white/45 uppercase tracking-widest mb-2">
+            1. Select SQL Dialect
+          </label>
+          <!--
+            id="dialectSelect" = JavaScript reads the chosen value from this id.
+            appearance-none    = removes the browser's default dropdown arrow
+                                 so we can style it consistently.
+          -->
+          <select
+            id="dialectSelect"
+            class="input-field w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm transition-colors appearance-none cursor-pointer"
+          >
+            <option value="MySQL">&#128200; MySQL</option>
+            <option value="PostgreSQL">&#128039; PostgreSQL</option>
+            <option value="SQL Server">&#129695; SQL Server (T-SQL)</option>
+            <option value="Oracle">&#128269; Oracle (PL/SQL)</option>
+            <option value="SQLite">&#128463; SQLite</option>
+          </select>
+        </div>
+
+
+        <!-- INPUT 2: PLAIN ENGLISH PROMPT TEXTAREA
+             =========================================
+             The main input where the user describes what data they want.
+             We use <textarea> (not <input type="text">) because queries
+             can be multi-line (e.g., with conditions, joins, etc.)
+
+             rows="7" = shows 7 visible text lines at once
+             resize-none = prevents the user from resizing (keeps layout clean)
+        -->
+        <div class="mb-5">
+          <label for="promptInput" class="block text-xs font-semibold text-white/45 uppercase tracking-widest mb-2">
+            2. Describe Your Query in Plain English
+          </label>
+          <textarea
+            id="promptInput"
+            rows="7"
+            placeholder="Example: Select all users who signed up in the last 30 days and have made at least one purchase, ordered by most recent signup first..."
+            class="input-field w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm placeholder-white/20 resize-none transition-colors leading-relaxed"
+          ></textarea>
+          <!-- Keyboard shortcut hint below the textarea -->
+          <p class="text-xs text-white/20 mt-1.5">Tip: Press <kbd class="bg-white/5 border border-white/10 rounded px-1 py-0.5 font-mono text-xs">Ctrl</kbd> + <kbd class="bg-white/5 border border-white/10 rounded px-1 py-0.5 font-mono text-xs">Enter</kbd> to generate</p>
+        </div>
+
+
+        <!-- QUICK EXAMPLE CHIPS
+             ======================
+             Clickable suggestion buttons that auto-fill the textarea.
+             onclick="fillExample(this.innerText)" calls our JS function
+             with the text content of the button that was clicked.
+        -->
+        <div class="mb-6">
+          <p class="text-xs text-white/30 mb-2.5 uppercase tracking-widest">Quick Examples</p>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="fillExample(this.innerText)" class="text-xs bg-white/5 hover:bg-blue-500/10 border border-white/[.08] hover:border-blue-500/30 text-white/45 hover:text-blue-300 px-3 py-1.5 rounded-lg transition-all">
+              Users who joined in the last 30 days
+            </button>
+            <button onclick="fillExample(this.innerText)" class="text-xs bg-white/5 hover:bg-blue-500/10 border border-white/[.08] hover:border-blue-500/30 text-white/45 hover:text-blue-300 px-3 py-1.5 rounded-lg transition-all">
+              Top 10 best-selling products this month
+            </button>
+            <button onclick="fillExample(this.innerText)" class="text-xs bg-white/5 hover:bg-blue-500/10 border border-white/[.08] hover:border-blue-500/30 text-white/45 hover:text-blue-300 px-3 py-1.5 rounded-lg transition-all">
+              Total revenue grouped by month this year
+            </button>
+            <button onclick="fillExample(this.innerText)" class="text-xs bg-white/5 hover:bg-blue-500/10 border border-white/[.08] hover:border-blue-500/30 text-white/45 hover:text-blue-300 px-3 py-1.5 rounded-lg transition-all">
+              Find all duplicate email addresses
+            </button>
+            <button onclick="fillExample(this.innerText)" class="text-xs bg-white/5 hover:bg-blue-500/10 border border-white/[.08] hover:border-blue-500/30 text-white/45 hover:text-blue-300 px-3 py-1.5 rounded-lg transition-all">
+              Orders that have no matching payment record
+            </button>
+            <button onclick="fillExample(this.innerText)" class="text-xs bg-white/5 hover:bg-blue-500/10 border border-white/[.08] hover:border-blue-500/30 text-white/45 hover:text-blue-300 px-3 py-1.5 rounded-lg transition-all">
+              Customers who have never placed an order
+            </button>
+          </div>
+        </div>
+
+
+        <!-- GENERATE BUTTON
+             =================
+             The main action button. Calls generateSQL() on click.
+             id="generateBtn" = JS disables it during loading to prevent double-clicks.
+             id="btnText" and id="btnIcon" = JS updates these during loading state.
+        -->
+        <button
+          id="generateBtn"
+          onclick="generateSQL()"
+          class="btn-generate w-full text-white font-bold py-3.5 rounded-xl text-base flex items-center justify-center gap-2.5"
+        >
+          <span id="btnIcon" aria-hidden="true">&#9889;</span>
+          <span id="btnText">Generate SQL Query</span>
+        </button>
+
+      </div><!-- end input card -->
+
+
+      <!-- HOW IT WORKS: Info box below the input card -->
+      <div class="bg-blue-500/5 border border-blue-500/15 rounded-xl p-4">
+        <p class="text-xs font-bold text-blue-400/80 mb-2.5 uppercase tracking-widest">How It Works</p>
+        <ol class="text-xs text-white/38 space-y-2 list-decimal list-inside leading-relaxed">
+          <li>Choose your SQL database type from the dropdown</li>
+          <li>Type your data request in plain conversational English</li>
+          <li>Click Generate &mdash; our AI builds the query for you</li>
+          <li>Copy the result and run it directly in your database tool</li>
+        </ol>
+      </div>
+
+    </div><!-- end left column -->
+
+
+    <!-- ==============================================================
+         RIGHT COLUMN: SQL OUTPUT TERMINAL
+         Displays the AI-generated SQL in a code-editor style terminal.
+         lg:sticky lg:top-24 = stays in view as you scroll on desktop.
+
+         Contains:
+           1. Terminal title bar (traffic light dots + copy button)
+           2. SQL code output area (id="sqlOutput")
+           3. Line number gutter (id="lineNumbers")
+           4. Status bar at the bottom
+         ============================================================== -->
+    <div class="flex flex-col gap-5 lg:sticky lg:top-24">
+
+      <!-- Terminal card -->
+      <div class="bg-slate-900/60 border border-white/[.08] rounded-2xl overflow-hidden">
+
+
+        <!-- TERMINAL TITLE BAR
+             ====================
+             Mimics the top bar of a macOS/VS Code terminal window.
+             Layout: [traffic light dots + filename] [copy button]
+        -->
+        <div class="flex items-center justify-between px-4 py-3 border-b border-white/[.06]" style="background:rgba(255,255,255,0.02)">
+
+          <!-- Left: decorative dots + filename -->
+          <div class="flex items-center gap-3">
+            <!-- macOS-style "traffic light" window control dots (decorative only) -->
+            <div class="flex items-center gap-1.5" aria-hidden="true">
+              <div class="w-3 h-3 rounded-full bg-red-500/55"></div>
+              <div class="w-3 h-3 rounded-full bg-yellow-500/55"></div>
+              <div class="w-3 h-3 rounded-full bg-green-500/55"></div>
+            </div>
+            <!-- Fake filename label -->
+            <span class="text-xs text-white/25 font-mono">query_output.sql</span>
+          </div>
+
+          <!-- Right: Copy to Clipboard button
+               onclick="copySQL()" calls our JS clipboard function.
+               id="copyIcon" and id="copyText" = JS changes these after copying. -->
+          <button
+            id="copyBtn"
+            onclick="copySQL()"
+            title="Copy SQL to clipboard"
+            class="btn-copy flex items-center gap-1.5 text-xs text-white/35 px-3 py-1.5 rounded-lg border border-white/[.08]"
+          >
+            <span id="copyIcon" aria-hidden="true">&#128203;</span>
+            <span id="copyText">Copy</span>
+          </button>
+
+        </div><!-- end title bar -->
+
+
+        <!-- SQL OUTPUT AREA + LINE NUMBER GUTTER
+             ======================================
+             .relative wrapper lets us absolutely position the line number gutter
+             overlaid on the left side of the terminal box.
+
+             The <pre> element (id="sqlOutput") is where JS puts the SQL result.
+             pre = "preformatted" — preserves spaces and newlines exactly as-is.
+             terminal-box class = monospace font, blue terminal text color.
+        -->
+        <div class="relative">
+
+          <!-- Line number gutter: absolutely positioned on the left edge.
+               JavaScript populates this with one <div> per line of SQL. -->
+          <div
+            id="lineNumbers"
+            class="absolute left-0 top-0 bottom-0 w-10 flex flex-col items-end pr-2 pt-5 select-none pointer-events-none"
+            style="color:rgba(255,255,255,0.10); font-family:'JetBrains Mono',monospace; font-size:0.75rem; line-height:1.7;"
+            aria-hidden="true"
+          ></div>
+
+          <!-- The actual SQL output pre-element.
+               pl-14 = left padding so text clears the line number gutter.
+               min-h-[420px] = always tall, even when empty. -->
+          <pre
+            id="sqlOutput"
+            class="terminal-box min-h-[420px] p-5 pl-14 overflow-x-auto"
+          >-- &#9889; Your generated SQL will appear here.
+-- Select a dialect, describe your query,
+-- then click "Generate SQL Query".</pre>
+
+        </div><!-- end relative wrapper -->
+
+
+        <!-- TERMINAL STATUS BAR
+             =====================
+             Shows status messages and character count at the bottom. -->
+        <div class="flex items-center justify-between px-4 py-2.5 border-t border-white/[.05]" style="background:rgba(255,255,255,0.01)">
+          <span id="statusText" class="text-xs text-white/22">Ready</span>
+          <span id="charCount"  class="text-xs text-white/18 font-mono">0 chars</span>
+        </div>
+
+      </div><!-- end terminal card -->
+
+
+      <!-- PRO TIPS BOX below the terminal -->
+      <div class="bg-slate-900/40 border border-white/[.06] rounded-xl p-4">
+        <p class="text-xs font-bold text-white/35 mb-2.5 uppercase tracking-widest">Pro Tips for Better Results</p>
+        <ul class="text-xs text-white/28 space-y-2 leading-relaxed">
+          <li>&#10003;&nbsp; Mention table names if you know them (e.g., "from the <code class="text-blue-400/70 font-mono">users</code> table")</li>
+          <li>&#10003;&nbsp; Specify conditions clearly (e.g., "where status is <code class="text-blue-400/70 font-mono">active</code>")</li>
+          <li>&#10003;&nbsp; State sort order (e.g., "ordered by <code class="text-blue-400/70 font-mono">created_at</code> newest first")</li>
+          <li>&#10003;&nbsp; For JOINs, describe the link (e.g., "match <code class="text-blue-400/70 font-mono">orders</code> to <code class="text-blue-400/70 font-mono">customers</code>")</li>
+        </ul>
+      </div>
+
+    </div><!-- end right column -->
+
+
+  </div><!-- end two-column grid -->
+</main><!-- end main -->
+
+
+<!-- ==================================================================
+     FOOTER
+     ================================================================== -->
+<footer class="border-t border-white/[.05] py-6">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+      <span class="text-sm font-bold">
+        <span class="text-blue-400">Easy</span><span class="text-purple-400">AI</span><span class="text-pink-400">Toolz</span>
+        <span class="text-white/18 font-normal text-xs ml-2">&mdash; Developer Suite</span>
+      </span>
+      <div class="flex items-center gap-3 text-xs text-white/22">
+        <a href="/" class="hover:text-white/55 transition-colors">&#8592; All Tools</a>
+        <span aria-hidden="true">|</span>
+        <a href="/developer/regex-generator.html" class="hover:text-white/55 transition-colors">Regex Generator &#8594;</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+<!-- ==================================================================
+     JAVASCRIPT
+     Placed at the BOTTOM of the body — ensures all HTML loads first.
+     The logic is embedded from sql_logic.js at build time.
+     ================================================================== -->
+<script>
+// ============================================================
+// sql_logic.js  —  The JavaScript for the SQL Generator tool
+// This file is read by write_sql_generator.js and embedded
+// into the final sql-generator.html file automatically.
+// ============================================================
+
+// FUNCTION 1: fillExample
+// Fills the textarea with a sample prompt when a chip is clicked.
+function fillExample(text) {
+  document.getElementById('promptInput').value = text;
+  document.getElementById('promptInput').focus();
+}
+
+
+// FUNCTION 2: generateSQL  (the main function)
+// Runs when the user clicks "Generate SQL Query".
+//
+// STEP-BY-STEP DATA FLOW:
+//   1. Read the selected SQL dialect and the user's typed prompt
+//   2. Validate that the user typed something
+//   3. Build the AI system prompt (wrap user input with instructions)
+//   4. Show a loading spinner so the user knows it's working
+//   5. POST the prompt to /api/generate (our secure backend proxy)
+//   6. Wait for the AI response
+//   7. Display the returned SQL in the terminal output box
+//   8. Reset the button back to its normal state
+async function generateSQL() {
+
+  // STEP 1: Read user inputs from the page
+  // getElementById finds the HTML element by its id="..." attribute.
+  // .value reads whatever the user typed or selected.
+  var dialect    = document.getElementById('dialectSelect').value;
+  var userPrompt = document.getElementById('promptInput').value.trim();
+
+  // STEP 2: Validate — don't send a blank prompt to the AI
+  if (!userPrompt) {
+    document.getElementById('sqlOutput').textContent =
+      '-- Please describe what SQL query you need in the text area,\n' +
+      '-- then click "Generate SQL Query".';
+    document.getElementById('statusText').textContent = 'No prompt entered';
+    return; // Stop here, do not call the API
+  }
+
+  // STEP 3: Build the AI system prompt
+  // This wraps the user's plain English in precise instructions
+  // so the AI returns ONLY clean SQL code — no extra chat or explanations.
+  var systemPrompt =
+    'You are an expert SQL database engineer with 15 years of experience. ' +
+    'Your ONLY job is to convert the user request into a correct, clean, and well-formatted ' +
+    dialect + ' SQL query. ' +
+    '\n\nSTRICT OUTPUT RULES:\n' +
+    '1. Return ONLY raw SQL code. No markdown fences, no backticks, no explanations.\n' +
+    '2. Use proper ' + dialect + ' syntax and functions.\n' +
+    '3. Format nicely: each clause (SELECT, FROM, WHERE, JOIN, ORDER BY) on its own line.\n' +
+    '4. Use sensible table and column names if none are specified.\n' +
+    '5. Add short SQL comments (--) only for complex multi-step queries.\n' +
+    '6. Your entire response must be ONLY the SQL code. Nothing before it, nothing after it.\n' +
+    '\n\nUser Request: ' + userPrompt;
+
+  // STEP 4: Update the UI to show a loading state
+  var btn     = document.getElementById('generateBtn');
+  var btnText = document.getElementById('btnText');
+  var btnIcon = document.getElementById('btnIcon');
+  var output  = document.getElementById('sqlOutput');
+  var status  = document.getElementById('statusText');
+
+  btn.disabled        = true;                          // prevent double-clicks
+  btnText.textContent = 'Generating...';
+  btnIcon.innerHTML   = '<span class="spinner"></span>'; // rotating spinner
+  output.textContent  = '-- Sending your request to the AI engine...\n-- This usually takes 2-5 seconds.';
+  status.textContent  = 'Calling AI...';
+  document.getElementById('charCount').textContent = '';
+
+  // STEP 5 + 6: Send POST request to our backend and wait for the response.
+  // We wrap in try/catch to handle any network errors gracefully.
+  try {
+
+    // fetch() sends an HTTP request to our backend.
+    // "/api/generate" maps to /functions/api/generate.js on Cloudflare Pages.
+    // The backend securely adds the API key and calls Google Gemini.
+    var response = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: systemPrompt })
+    });
+
+    // Parse the JSON the backend sends back
+    var data = await response.json();
+
+    // STEP 7: Display the result
+    if (data.result) {
+      var sql = data.result.trim();
+      output.textContent = sql;
+      status.textContent = 'Generated for ' + dialect + ' successfully';
+      document.getElementById('charCount').textContent = sql.length + ' chars';
+      updateLineNumbers(sql);
+    } else {
+      // The backend returned an error object
+      output.textContent = '-- Error from AI: ' + (data.error || 'Unknown error.');
+      status.textContent = 'Error from AI';
+    }
+
+  } catch (networkError) {
+    // Could not reach our server at all (offline, server down, etc.)
+    output.textContent =
+      '-- Network error: Could not reach the server.\n' +
+      '-- Please check your internet connection and try again.';
+    status.textContent = 'Connection failed';
+  }
+
+  // STEP 8: Re-enable the button so the user can generate again
+  btn.disabled        = false;
+  btnText.textContent = 'Generate SQL Query';
+  btnIcon.textContent = '\u26A1'; // ⚡ lightning bolt
+}
+
+
+// FUNCTION 3: copySQL
+// Copies the generated SQL to the clipboard using the Clipboard API.
+// Shows "Copied!" for 2 seconds as visual feedback.
+async function copySQL() {
+  var sql = document.getElementById('sqlOutput').textContent;
+
+  // Do nothing if it's still the placeholder text
+  if (sql.includes('will appear here') || sql.includes('Sending your request')) {
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(sql);
+    document.getElementById('copyIcon').textContent = '\u2713'; // checkmark
+    document.getElementById('copyText').textContent = 'Copied!';
+    setTimeout(function() {
+      document.getElementById('copyIcon').textContent = '\uD83D\uDCCB'; // clipboard emoji
+      document.getElementById('copyText').textContent = 'Copy';
+    }, 2000);
+
+  } catch (e) {
+    // Fallback: select all text if clipboard API is blocked
+    var range = document.createRange();
+    range.selectNode(document.getElementById('sqlOutput'));
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    document.getElementById('copyText').textContent = 'Selected!';
+  }
+}
+
+
+// FUNCTION 4: updateLineNumbers
+// Counts the lines in the SQL output and updates the line number gutter.
+function updateLineNumbers(sql) {
+  var lines  = sql.split('\n');
+  var gutter = document.getElementById('lineNumbers');
+  gutter.innerHTML = '';
+  for (var i = 1; i <= lines.length; i++) {
+    var el = document.createElement('div');
+    el.textContent = i;
+    gutter.appendChild(el);
+  }
+}
+
+
+// KEYBOARD SHORTCUT: Ctrl+Enter (or Cmd+Enter on Mac) triggers generation.
+// This is a standard developer shortcut that power users expect.
+document.getElementById('promptInput').addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    generateSQL();
+  }
+});
+
+</script>
+
+<script src="/assets/js/antigravity-core.js"></script>
+</body>
+</html>
