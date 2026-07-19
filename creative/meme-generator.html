@@ -732,7 +732,10 @@ async function generateMeme() {
     var response = await fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: systemPrompt })
+      body: JSON.stringify({ 
+        systemPrompt: "You are an expert automated utility backend tailored for real-time web applications. Output strictly the formatted semantic structure or text required by the client tool interface. Never include markdown headers, triple backticks (```), greetings, intros, or conversational filler.",
+        userPrompt: systemPrompt
+      })
     });
 
     var data = await response.json();
