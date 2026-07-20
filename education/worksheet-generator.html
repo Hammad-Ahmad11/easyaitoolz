@@ -909,7 +909,7 @@ async function generateMaterial() {
     }
 
   } catch (err) {
-    showDocError('Network error. Make sure dev-server.js is running and your API key is set in .env.local');
+    showDocError('Network error. Could not reach the server. Please check your internet connection and try again.');
   }
 
   // ── STEP 8: Reset button ─────────────────────────────────────────────────
@@ -1126,6 +1126,5 @@ document.getElementById('topicInput').addEventListener('keydown', function(e) {
 
 </script>
 
-<script src="/assets/js/antigravity-core.js"></script>
 </body>
 </html>

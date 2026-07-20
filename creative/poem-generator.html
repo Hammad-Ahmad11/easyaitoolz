@@ -718,7 +718,7 @@ async function generatePoem() {
     var response = await fetch('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         systemPrompt: "You are an expert automated utility backend tailored for real-time web applications. Output strictly the formatted semantic structure or text required by the client tool interface. Never include markdown headers, triple backticks (```), greetings, intros, or conversational filler.",
         userPrompt: systemPrompt
       })
@@ -734,7 +734,12 @@ async function generatePoem() {
       showPoemError('AI Error: ' + (data.error || 'Unknown error. Please try again.'));
     }
 
-  } catch(err) { console.error(err); }
+  } catch (err) {
+    // Show the actual error in the poem pad so the user isn't left with
+    // a stuck loading spinner — previously this was silently swallowed.
+    console.error('Poem generator error:', err);
+    showPoemError('Error: ' + (err.message || 'Could not reach the server. Please try again.'));
+  }
 
   // ── STEP 8: Reset the button ─────────────────────────────────────────────
   btn.disabled        = false;
@@ -867,8 +872,8 @@ function fillTopicExample(text) {
 
 // ─── HELPER: escapeHTML ───────────────────────────────────────────────────────
 // Converts any HTML special characters in a string into safe text entities.
-// This prevents XSS: if the AI returned "<script>alert(1)</script>",
-// this turns it into harmless text: "&lt;script&gt;alert(1)&lt;/script&gt;".
+// This prevents XSS: if the AI returned "<script>alert(1)<\/script>",
+// this turns it into harmless text: "&lt;script&gt;alert(1)&lt;\/script&gt;".
 // ALWAYS use this before inserting AI text into innerHTML.
 function escapeHTML(str) {
   var div = document.createElement('div');
@@ -888,6 +893,5 @@ document.getElementById('topicInput').addEventListener('keydown', function(e) {
 
 </script>
 
-<script src="/assets/js/antigravity-core.js"></script>
 </body>
 </html>

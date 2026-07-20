@@ -673,7 +673,7 @@ async function generateQuiz() {
     }
 
   } catch (err) {
-    showError('Network error. dev-server.js running hai? .env.local mein API key hai?');
+    showError('Network error. Could not reach the server. Please check your internet connection and try again.');
   }
 
   // Button reset karo
@@ -1094,6 +1094,5 @@ document.getElementById('topicInput').addEventListener('keydown', function(e) {
 
 </script>
 
-<script src="/assets/js/antigravity-core.js"></script>
 </body>
 </html>

@@ -41,7 +41,11 @@ export async function onRequestPost(context) {
     return respond({ error: "Invalid JSON body." }, 400);
   }
 
-  const userPrompt = (requestBody.prompt || "").trim();
+  // Accept both formats:
+  //   Original format : { prompt: "..." }
+  //   Injected format : { systemPrompt: "...", userPrompt: "..." }
+  const userPrompt   = (requestBody.prompt || requestBody.userPrompt || "").trim();
+  const systemPrompt = (requestBody.systemPrompt || "").trim();
   if (!userPrompt) {
     return respond({ error: "No prompt provided." }, 400);
   }
@@ -71,7 +75,9 @@ export async function onRequestPost(context) {
       },
       body: JSON.stringify({
         model      : GROQ_MODEL,
-        messages   : [{ role: "user", content: userPrompt }],
+        messages   : systemPrompt
+          ? [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }]
+          : [{ role: "user", content: userPrompt }],
         temperature: 0.7,   // 0 = precise/deterministic, 1 = creative. 0.7 is balanced.
         max_tokens : 2048   // Max response length (~1500 words)
       })

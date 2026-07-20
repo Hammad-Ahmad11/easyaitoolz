@@ -588,7 +588,7 @@ async function generatePlan() {
     // The request could not reach the server at all
     showError(
       'Network error: Could not reach the server.\n' +
-      'Make sure the dev server is running and your API key is set in .env.local'
+      'Could not reach the server. Please check your internet connection and try again.'
     );
   }
 
@@ -774,6 +774,5 @@ function escapeHTML(str) {
 
 </script>
 
-<script src="/assets/js/antigravity-core.js"></script>
 </body>
 </html>

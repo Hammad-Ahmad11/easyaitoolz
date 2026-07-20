@@ -884,7 +884,7 @@ async function generateStudyPlan() {
     }
 
   } catch (err) {
-    showPlanError('Network error. Make sure dev-server.js is running and API key is set in .env.local');
+    showPlanError('Network error. Could not reach the server. Please check your internet connection and try again.');
   }
 
   // Reset button
@@ -1247,6 +1247,5 @@ document.getElementById('subjectInput').addEventListener('keydown', function(e) 
 
 </script>
 
-<script src="/assets/js/antigravity-core.js"></script>
 </body>
 </html>

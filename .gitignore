@@ -1,3 +1,31 @@
+# ─── API KEYS & SECRETS ────────────────────────────────────────────
+# NEVER commit these — add GROQ_API_KEY to Cloudflare Dashboard instead
 .env.local
-.dev.vars
 .env
+.dev.vars
+*.env
+
+# ─── LOCAL DEV ONLY ────────────────────────────────────────────────
+# dev-server.js is for local testing only, not used by Cloudflare
+# (you can keep it in git if you want, just don't deploy secrets with it)
+
+# ─── NODE / BUILD ──────────────────────────────────────────────────
+node_modules/
+dist/
+.cache/
+
+# ─── OS FILES ──────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ─── EDITOR FILES ──────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# ─── TEMP / LOGS ───────────────────────────────────────────────────
+*.log
+__temp_*.js
+__check.js

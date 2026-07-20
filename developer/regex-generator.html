@@ -887,7 +887,7 @@ async function generateRegex() {
     }
 
   } catch (err) {
-    showRegexError('Network error. Make sure dev-server.js is running and your API key is set in .env.local');
+    showRegexError('Network error. Could not reach the server. Please check your internet connection and try again.');
   }
 
   // ── STEP 10: Reset button ────────────────────────────────────────────────
@@ -1126,6 +1126,5 @@ document.getElementById('descriptionInput').addEventListener('keydown', function
 
 </script>
 
-<script src="/assets/js/antigravity-core.js"></script>
 </body>
 </html>
