@@ -1,0 +1,14 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# wrangler.toml
+# Cloudflare Worker configuration file for easyaitoolz
+# ─────────────────────────────────────────────────────────────────────────────
+
+name             = "easyaitoolz"
+main             = "worker.js"
+compatibility_date = "2024-09-23"
+
+# ── Static Assets ─────────────────────────────────────────────────────────────
+# Serves all HTML, CSS, JS files from the repo root automatically.
+# The Worker script handles /api/generate, everything else goes to static files.
+[assets]
+directory = "./"
