@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+# Disallow backend / config files
+Disallow: /functions/
+Disallow: /worker.js
+Disallow: /wrangler.toml
+Disallow: /dev-server.js
+Disallow: /.gitignore
+Disallow: /write_index.js
+Disallow: /write_logo_maker.js
+
+# Sitemap location
+Sitemap: https://easyaitoolz.ranahammad9995.workers.dev/sitemap.xml

@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--
   FILE     : /education/quiz-generator.html
   WEBSITE  : easyaitoolz.com
-  PURPOSE  : AI Interactive Quiz Generator — Education Suite
+  PURPOSE  : AI Interactive Quiz Generator â€” Education Suite
   TECH     : HTML5 + Tailwind CSS CDN + Pure Vanilla JavaScript
 
   TOOL KA KAAM (How it works):
@@ -10,10 +10,10 @@
   1. User topic likhta hai (e.g., "Photosynthesis") + difficulty choose karta hai
   2. JavaScript ek strict format prompt banata hai:
        "Q1: ... | A: ... | B: ... | C: ... | D: ... | Correct: A"
-  3. /api/generate ko POST hota hai (Cloudflare backend → Gemini AI)
-  4. AI ka jawab "---" par split hota hai → 3 question objects ban jaate hain
+  3. /api/generate ko POST hota hai (Cloudflare backend â†’ Gemini AI)
+  4. AI ka jawab "---" par split hota hai â†’ 3 question objects ban jaate hain
   5. Quiz shuru hota hai: ek ek question dikhta hai
-  6. User option click karta hai → INSTANT green/red feedback
+  6. User option click karta hai â†’ INSTANT green/red feedback
   7. 1.5 seconds baad agla question automatically aata hai
   8. 3rd question ke baad result screen (score + breakdown) dikhta hai
 -->
@@ -22,6 +22,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%234F46E5'/><stop offset='100%' style='stop-color:%23EC4899'/></linearGradient></defs><rect width='100' height='100' rx='20' fill='url(%23g)'/><text y='.9em' font-size='70' x='15'>⚡</text></svg>" />
   <title>AI Interactive Quiz Generator &mdash; EasyAIToolz</title>
   <meta name="description" content="Generate an interactive 3-question quiz on any topic with AI. Play instantly, get scored in real-time. Free, no signup required." />
 
@@ -39,7 +40,7 @@
   </script>
 
   <style>
-    /* ── BASE ──────────────────────────────────────────────────────────────*/
+    /* â”€â”€ BASE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     body {
       background-color: #06080f;
       font-family: 'Inter', sans-serif;
@@ -47,9 +48,9 @@
       overflow-x: hidden;
     }
 
-    /* ── MESH BACKGROUND ───────────────────────────────────────────────────
-       Indigo-blue-cyan aurora — Educational suite ka theme.
-       Quiz tool ke liye thoda zyada vibrant rakha hai — game-like feel. */
+    /* â”€â”€ MESH BACKGROUND â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       Indigo-blue-cyan aurora â€” Educational suite ka theme.
+       Quiz tool ke liye thoda zyada vibrant rakha hai â€” game-like feel. */
     .mesh-bg {
       background-color: #06080f;
       background-image:
@@ -58,7 +59,7 @@
         radial-gradient(ellipse 55% 42% at 52% 90%, rgba(99,102,241,.08) 0%, transparent 52%);
     }
 
-    /* ── NAVBAR ────────────────────────────────────────────────────────────*/
+    /* â”€â”€ NAVBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     .navbar-glass {
       background: rgba(6, 8, 15, 0.82);
       backdrop-filter: blur(16px);
@@ -66,8 +67,8 @@
       border-bottom: 1px solid rgba(255,255,255,.06);
     }
 
-    /* ── GRADIENT HEADING ──────────────────────────────────────────────────
-       Indigo-blue-cyan gradient — education + game ka perfect mix. */
+    /* â”€â”€ GRADIENT HEADING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       Indigo-blue-cyan gradient â€” education + game ka perfect mix. */
     .gradient-text {
       background: linear-gradient(135deg, #818cf8 0%, #38bdf8 55%, #34d399 100%);
       -webkit-background-clip: text;
@@ -75,14 +76,14 @@
       background-clip: text;
     }
 
-    /* ── INPUT FOCUS ───────────────────────────────────────────────────────*/
+    /* â”€â”€ INPUT FOCUS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     .input-field:focus {
       outline: none;
       box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.38);
       border-color: rgba(99, 102, 241, 0.50);
     }
 
-    /* ── CUSTOM DROPDOWN ARROW ─────────────────────────────────────────────*/
+    /* â”€â”€ CUSTOM DROPDOWN ARROW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     .custom-select {
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
       background-repeat: no-repeat;
@@ -90,8 +91,8 @@
       padding-right: 40px;
     }
 
-    /* ── GENERATE BUTTON ───────────────────────────────────────────────────
-       Bold indigo-blue-cyan gradient — energetic, game-start feel. */
+    /* â”€â”€ GENERATE BUTTON â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       Bold indigo-blue-cyan gradient â€” energetic, game-start feel. */
     .btn-generate {
       background: linear-gradient(135deg, #4f46e5 0%, #2563eb 50%, #0891b2 100%);
       background-size: 200% 200%;
@@ -101,7 +102,7 @@
     .btn-generate:hover:not(:disabled) { background-position: right center; transform: translateY(-1px); }
     .btn-generate:disabled             { opacity: 0.45; cursor: not-allowed; }
 
-    /* ── SPINNER ───────────────────────────────────────────────────────────*/
+    /* â”€â”€ SPINNER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner {
       width: 17px; height: 17px;
@@ -113,7 +114,7 @@
       vertical-align: middle;
     }
 
-    /* ── QUIZ OPTION BUTTON ────────────────────────────────────────────────
+    /* â”€â”€ QUIZ OPTION BUTTON â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Yeh button sirf JavaScript se style hota hai (correct/wrong feedback).
        CSS classes JavaScript ke zariye dynamically add/remove hoti hain.
        Base styles yahan hain, feedback styles JS mein inline hain. */
@@ -126,14 +127,14 @@
       border-color: rgba(99,102,241,0.40);
     }
 
-    /* ── CORRECT ANSWER GLOW ────────────────────────────────────────────────
+    /* â”€â”€ CORRECT ANSWER GLOW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        JavaScript green highlight ke saath yeh animation add hoti hai. */
     @keyframes correctPulse {
       0%, 100% { box-shadow: 0 0 0 rgba(34,197,94,0); }
       50%       { box-shadow: 0 0 24px rgba(34,197,94,0.30); }
     }
 
-    /* ── LOADING DOTS ──────────────────────────────────────────────────────
+    /* â”€â”€ LOADING DOTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Loading state mein bouncing dots animation. */
     @keyframes loadBounce {
       0%, 100% { transform: translateY(0);   }
@@ -143,7 +144,7 @@
     .load-dot-2 { animation: loadBounce 1s ease infinite; animation-delay: 200ms; }
     .load-dot-3 { animation: loadBounce 1s ease infinite; animation-delay: 400ms; }
 
-    /* ── EXAMPLE CHIP ──────────────────────────────────────────────────────*/
+    /* â”€â”€ EXAMPLE CHIP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     .example-chip { transition: all 0.2s ease; }
     .example-chip:hover {
       background: rgba(99,102,241,0.12);
@@ -151,8 +152,8 @@
       color: #a5b4fc;
     }
 
-    /* ── QUIZ ZONE CARD ────────────────────────────────────────────────────
-       Right side ka main card — quiz play area.
+    /* â”€â”€ QUIZ ZONE CARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       Right side ka main card â€” quiz play area.
        Height fixed rakhi hai taake layout shift na ho states change karte waqt. */
     .quiz-zone-card {
       background: rgba(255,255,255,0.025);
@@ -163,13 +164,32 @@
       flex-direction: column;
     }
 
-    /* ── SCROLLBAR ─────────────────────────────────────────────────────── */
+    /* â”€â”€ SCROLLBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     ::-webkit-scrollbar       { width: 6px; }
     ::-webkit-scrollbar-track { background: #0d1117; }
     ::-webkit-scrollbar-thumb { background: #1e1b4b; border-radius: 4px; }
 
     html { scroll-behavior: smooth; }
   </style>
+
+  <!-- â”€â”€â”€ SEO: Open Graph â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:site_name"   content="EasyAIToolz" />
+  <meta property="og:title"       content="AI Quiz Generator - Create Quizzes Instantly | EasyAIToolz" />
+  <meta property="og:description" content="Generate custom quizzes on any topic in seconds with AI. Perfect for teachers, students, and trainers. Free quiz maker." />
+  <meta property="og:url"         content="https://easyaitoolz.ranahammad9995.workers.dev/education/quiz-generator.html" />
+  <meta property="og:image"       content="https://easyaitoolz.ranahammad9995.workers.dev/og-image.png" />
+  <meta property="og:image:width"  content="1200" />
+  <meta property="og:image:height" content="630" />
+  <!-- â”€â”€â”€ SEO: Twitter Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:title"       content="AI Quiz Generator - Create Quizzes Instantly | EasyAIToolz" />
+  <meta name="twitter:description" content="Generate custom quizzes on any topic in seconds with AI. Perfect for teachers, students, and trainers. Free quiz maker." />
+  <meta name="twitter:image"       content="https://easyaitoolz.ranahammad9995.workers.dev/og-image.png" />
+  <!-- â”€â”€â”€ SEO: Canonical + Keywords â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <link rel="canonical" href="https://easyaitoolz.ranahammad9995.workers.dev/education/quiz-generator.html" />
+  <meta name="keywords" content="ai quiz generator, quiz maker, quiz creator, automatic quiz, free quiz tool" />
+  <meta name="robots"   content="index, follow" />
 </head>
 
 
@@ -257,7 +277,7 @@
 
 
 <!-- ==============================================================================
-     MAIN WORKSPACE — Two-column layout
+     MAIN WORKSPACE â€” Two-column layout
 
      LAYOUT EXPLANATION (beginner ke liye):
        Hum "grid" use kar rahe hain page ko do parts mein divide karne ke liye.
@@ -287,9 +307,9 @@
         </h2>
 
 
-        <!-- ── INPUT 1: QUIZ TOPIC ────────────────────────────────────────
+        <!-- â”€â”€ INPUT 1: QUIZ TOPIC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              User kaunse topic par quiz chahta hai?
-             Text input hai (single line) — Enter key se bhi generate hota hai.
+             Text input hai (single line) â€” Enter key se bhi generate hota hai.
 
              EXAMPLES:
                "Photosynthesis"
@@ -309,7 +329,7 @@
             class="input-field w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm placeholder-white/20 transition-colors"
           />
 
-          <!-- Quick topic chips — click kar ke topic fill ho jata hai -->
+          <!-- Quick topic chips â€” click kar ke topic fill ho jata hai -->
           <div class="flex flex-wrap gap-1.5 mt-2.5">
             <button onclick="fillTopic(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">Photosynthesis</button>
             <button onclick="fillTopic(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">World War 2</button>
@@ -324,12 +344,12 @@
         </div>
 
 
-        <!-- ── INPUT 2: DIFFICULTY LEVEL ─────────────────────────────────
+        <!-- â”€â”€ INPUT 2: DIFFICULTY LEVEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              Quiz kitna mushkil hona chahiye?
 
-             Easy   → Basic recall questions, straightforward options
-             Medium → Understanding required, some tricky options
-             Hard   → Analysis + application, all options plausible
+             Easy   â†’ Basic recall questions, straightforward options
+             Medium â†’ Understanding required, some tricky options
+             Hard   â†’ Analysis + application, all options plausible
 
              JavaScript is value ko AI prompt mein include karta hai.
         -->
@@ -338,14 +358,14 @@
             2. Difficulty Level
           </label>
           <select id="difficultySelect" class="input-field custom-select w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm transition-colors appearance-none cursor-pointer">
-            <option value="Easy">&#128994; Easy — Basic level</option>
-            <option value="Medium" selected>&#128993; Medium — Standard level</option>
-            <option value="Hard">&#128308; Hard — Advanced level</option>
+            <option value="Easy">&#128994; Easy â€” Basic level</option>
+            <option value="Medium" selected>&#128993; Medium â€” Standard level</option>
+            <option value="Hard">&#128308; Hard â€” Advanced level</option>
           </select>
         </div>
 
 
-        <!-- ── GENERATE BUTTON ────────────────────────────────────────────
+        <!-- â”€â”€ GENERATE BUTTON â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              YEH BUTTON KYA KARTA HAI:
                1. onclick="generateQuiz()" JavaScript function call hoti hai
                2. JS validation karta hai (topic empty nahi hona chahiye)
@@ -372,7 +392,7 @@
         <ol class="text-xs text-white/35 space-y-2 leading-relaxed list-none">
           <li class="flex items-start gap-2"><span class="text-indigo-500 font-bold flex-shrink-0">1.</span><span>Topic aur difficulty choose karo</span></li>
           <li class="flex items-start gap-2"><span class="text-indigo-500 font-bold flex-shrink-0">2.</span><span>AI 3 multiple-choice questions generate karega</span></li>
-          <li class="flex items-start gap-2"><span class="text-indigo-500 font-bold flex-shrink-0">3.</span><span>Option click karo — instant green/red feedback milega</span></li>
+          <li class="flex items-start gap-2"><span class="text-indigo-500 font-bold flex-shrink-0">3.</span><span>Option click karo â€” instant green/red feedback milega</span></li>
           <li class="flex items-start gap-2"><span class="text-indigo-500 font-bold flex-shrink-0">4.</span><span>Score aur breakdown screen par dekho</span></li>
         </ol>
       </div>
@@ -383,9 +403,9 @@
     <!-- ============================================================
          RIGHT COLUMN: QUIZ PLAY ZONE
          YEH AREA 4 STATES MEIN HOTA HAI:
-           State A (emptyState)   — Quiz shuru hone se pehle placeholder
-           State B (loadingState) — API call chal rahi hai
-           State C (quizState)    — Active quiz (questions + options)
+           State A (emptyState)   â€” Quiz shuru hone se pehle placeholder
+           State B (loadingState) â€” API call chal rahi hai
+           State C (quizState)    â€” Active quiz (questions + options)
 
          State D (result) bhi quizState ke andar hi render hota hai
          (JavaScript quizContent div ka HTML replace karta hai).
@@ -397,7 +417,7 @@
          ============================================================ -->
     <div class="flex flex-col gap-4 lg:sticky lg:top-24">
 
-      <!-- Quiz zone card — sab states is card ke andar hain -->
+      <!-- Quiz zone card â€” sab states is card ke andar hain -->
       <div class="quiz-zone-card overflow-hidden">
 
         <!-- Card header bar -->
@@ -412,11 +432,11 @@
         <div class="flex-1 flex flex-col">
 
 
-          <!-- ═══════════════════════════════════════════════════════════════
+          <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
                STATE A: EMPTY STATE
                Shown when the user hasn't generated a quiz yet.
                showState('empty') is called at start and after newQuiz().
-               ═══════════════════════════════════════════════════════════════ -->
+               â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
           <div id="emptyState" class="flex-1 flex flex-col items-center justify-center gap-6 p-8 text-center">
 
             <!-- Decorative quiz icon -->
@@ -466,11 +486,11 @@
           </div><!-- end emptyState -->
 
 
-          <!-- ═══════════════════════════════════════════════════════════════
+          <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
                STATE B: LOADING STATE
                showState('loading') call hone par dikhta hai.
-               API call chal rahi hai — user ko wait karna hai.
-               ═══════════════════════════════════════════════════════════════ -->
+               API call chal rahi hai â€” user ko wait karna hai.
+               â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
           <div id="loadingState" class="hidden flex-1 flex flex-col items-center justify-center gap-6 p-8 text-center">
 
             <!-- Big spinner -->
@@ -497,7 +517,7 @@
           </div><!-- end loadingState -->
 
 
-          <!-- ═══════════════════════════════════════════════════════════════
+          <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
                STATE C: ACTIVE QUIZ (aur STATE D: RESULT)
                showState('quiz') call hone par dikhta hai.
 
@@ -516,7 +536,7 @@
                    - Emoji + message
                    - Answer breakdown table
                    - Restart aur New Quiz buttons
-               ═══════════════════════════════════════════════════════════════ -->
+               â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
           <div id="quizState" class="hidden flex-1 flex flex-col p-6 overflow-y-auto">
             <!-- JavaScript yahan content inject karta hai -->
             <div id="quizContent"></div>
@@ -554,7 +574,7 @@
 
 
 <!-- ==============================================================================
-     JAVASCRIPT — quiz_logic.js yahan build time par embed hota hai.
+     JAVASCRIPT â€” quiz_logic.js yahan build time par embed hota hai.
      Body ke bilkul end mein rakha gaya hai taake jab JS chale,
      saare HTML elements pehle se exist kar rahay hon.
      ============================================================================== -->
@@ -566,24 +586,24 @@
 // ============================================================
 
 
-// ─── GLOBAL STATE VARIABLES ──────────────────────────────────────────────────
+// â”€â”€â”€ GLOBAL STATE VARIABLES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Yeh variables puri quiz ka "state" (halat) store karte hain.
 // In ko function ke andar nahi, bahar (global) rakha gaya hai taake
 // saare functions inhe access aur modify kar sakein.
 
-var questions           = [];  // Parsed questions array — har item ek question object hai
+var questions           = [];  // Parsed questions array â€” har item ek question object hai
 var currentQuestionIndex = 0;  // Abhi kaunsa question show ho raha hai (0 = pehla)
 var score               = 0;   // Kitne jawab sahi diye (0 se shuru)
 var userAnswers         = [];  // User ne har question ka kya jawab diya (tracking ke liye)
 var isAnswering         = false; // TRUE = user ne click kiya, animation chal rahi hai
 
 
-// ─── FUNCTION 1: generateQuiz ────────────────────────────────────────────────
-// Main function. "Generate Interactive Quiz ⚡" button click karne par chalta hai.
+// â”€â”€â”€ FUNCTION 1: generateQuiz â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Main function. "Generate Interactive Quiz âš¡" button click karne par chalta hai.
 //
 // DATA FLOW:
 //   Step 1: Topic aur difficulty input padhna
-//   Step 2: Validate — topic zaruri hai
+//   Step 2: Validate â€” topic zaruri hai
 //   Step 3: AI ko bhejne ka prompt banana
 //   Step 4: Loading state dikhana
 //   Step 5: /api/generate ko POST karna
@@ -592,15 +612,15 @@ var isAnswering         = false; // TRUE = user ne click kiya, animation chal ra
 //   Step 8: Quiz shuru karna (pehla question dikhana)
 async function generateQuiz() {
 
-  // ── STEP 1: Input values padhna ─────────────────────────────────────────
+  // â”€â”€ STEP 1: Input values padhna â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var topic      = document.getElementById('topicInput').value.trim();
   var difficulty = document.getElementById('difficultySelect').value;
 
-  // ── STEP 2: Validate — topic field khali nahi hona chahiye ──────────────
+  // â”€â”€ STEP 2: Validate â€” topic field khali nahi hona chahiye â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (!topic) {
     var input = document.getElementById('topicInput');
     input.style.borderColor = 'rgba(99,102,241,0.7)';
-    input.placeholder = 'Topic required hai! ✦';
+    input.placeholder = 'Topic required hai! âœ¦';
     setTimeout(function() {
       input.style.borderColor = '';
       input.placeholder = 'e.g., Photosynthesis, World War 2, HTML Basics...';
@@ -608,7 +628,7 @@ async function generateQuiz() {
     return;
   }
 
-  // ── STEP 3: AI System Prompt banana ─────────────────────────────────────
+  // â”€â”€ STEP 3: AI System Prompt banana â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // IMPORTANT: Hum AI ko EXACT format mein jawab dene ko kehte hain:
   //   Q1: [question] | A: [opt] | B: [opt] | C: [opt] | D: [opt] | Correct: [letter]
   //   ---
@@ -622,7 +642,7 @@ async function generateQuiz() {
     'You are a professional quiz compiler and academic expert. ' +
     'Generate a 3-question multiple-choice quiz about: "' + topic + '" ' +
     'with difficulty level: ' + difficulty + '.\n\n' +
-    'STRICT OUTPUT FORMAT — copy this EXACTLY, no deviations:\n\n' +
+    'STRICT OUTPUT FORMAT â€” copy this EXACTLY, no deviations:\n\n' +
     'Q1: [Question text here] | A: [Option A text] | B: [Option B text] | C: [Option C text] | D: [Option D text] | Correct: [A or B or C or D]\n' +
     '---\n' +
     'Q2: [Question text here] | A: [Option A text] | B: [Option B text] | C: [Option C text] | D: [Option D text] | Correct: [A or B or C or D]\n' +
@@ -635,7 +655,7 @@ async function generateQuiz() {
     '4. Make questions genuinely challenging for ' + difficulty + ' level.\n' +
     '5. All 4 options must be plausible (no obviously wrong options).';
 
-  // ── STEP 4: Loading state dikhana ───────────────────────────────────────
+  // â”€â”€ STEP 4: Loading state dikhana â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var btn     = document.getElementById('generateBtn');
   var btnText = document.getElementById('btnText');
   var btnIcon = document.getElementById('btnIcon');
@@ -646,7 +666,7 @@ async function generateQuiz() {
 
   showState('loading'); // Quiz zone mein loading animation dikhao
 
-  // ── STEP 5 + 6: Backend ko POST karo aur jawab wait karo ────────────────
+  // â”€â”€ STEP 5 + 6: Backend ko POST karo aur jawab wait karo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   try {
 
     var response = await fetch('/api/generate', {
@@ -660,7 +680,7 @@ async function generateQuiz() {
 
     var data = await response.json();
 
-    // ── STEP 7 + 8: Parse aur quiz shuru karo ─────────────────────────────
+    // â”€â”€ STEP 7 + 8: Parse aur quiz shuru karo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (data.result) {
       var parsed = parseQuizResponse(data.result.trim());
       if (parsed.length === 0) {
@@ -679,11 +699,11 @@ async function generateQuiz() {
   // Button reset karo
   btn.disabled        = false;
   btnText.textContent = 'Generate Interactive Quiz';
-  btnIcon.textContent = '\u26A1'; // ⚡
+  btnIcon.textContent = '\u26A1'; // âš¡
 }
 
 
-// ─── FUNCTION 2: parseQuizResponse ───────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 2: parseQuizResponse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // AI ke raw text response ko ek useable JavaScript array mein convert karta hai.
 //
 // INPUT (AI ka jawab):
@@ -699,8 +719,8 @@ async function generateQuiz() {
 //   ]
 //
 // PARSING LOGIC:
-//   1. "---" par split karo → 3 chunks milte hain
-//   2. Har chunk ko " | " par split karo → multiple parts milte hain
+//   1. "---" par split karo â†’ 3 chunks milte hain
+//   2. Har chunk ko " | " par split karo â†’ multiple parts milte hain
 //   3. Har part se label (Q1:, A:, Correct:) hata kar value nikalo
 function parseQuizResponse(rawText) {
 
@@ -715,10 +735,10 @@ function parseQuizResponse(rawText) {
 
     // Step 2: " | " par split karo har question ke parts ke liye
     var parts = trimmed.split(/\s*\|\s*/);
-    if (parts.length < 6) return; // incomplete question — skip
+    if (parts.length < 6) return; // incomplete question â€” skip
 
     // Step 3: Har part se label hata kar value nikalo
-    // e.g., "Q1: What is...?" → remove "Q1: " → "What is...?"
+    // e.g., "Q1: What is...?" â†’ remove "Q1: " â†’ "What is...?"
     var questionText = parts[0].replace(/^Q\d+:\s*/i, '').trim();
     var optionA      = parts[1].replace(/^A:\s*/i, '').trim();
     var optionB      = parts[2].replace(/^B:\s*/i, '').trim();
@@ -740,13 +760,13 @@ function parseQuizResponse(rawText) {
 }
 
 
-// ─── FUNCTION 3: startQuiz ───────────────────────────────────────────────────
-// Quiz shuru karta hai — global state reset karke pehla question dikhata hai.
+// â”€â”€â”€ FUNCTION 3: startQuiz â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Quiz shuru karta hai â€” global state reset karke pehla question dikhata hai.
 //
 // Parameters:
-//   parsedQuestions — array from parseQuizResponse()
-//   topic           — user ka topic (score screen par dikhane ke liye)
-//   difficulty      — selected difficulty
+//   parsedQuestions â€” array from parseQuizResponse()
+//   topic           â€” user ka topic (score screen par dikhane ke liye)
+//   difficulty      â€” selected difficulty
 function startQuiz(parsedQuestions, topic, difficulty) {
 
   // Global state reset karo (naya quiz shuru ho raha hai)
@@ -766,7 +786,7 @@ function startQuiz(parsedQuestions, topic, difficulty) {
 }
 
 
-// ─── FUNCTION 4: renderCurrentQuestion ───────────────────────────────────────
+// â”€â”€â”€ FUNCTION 4: renderCurrentQuestion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // currentQuestionIndex wala question render karta hai quiz zone mein.
 //
 // YEH FUNCTION KARTA HAI:
@@ -786,27 +806,27 @@ function renderCurrentQuestion() {
   var quizContent = document.getElementById('quizContent');
   quizContent.innerHTML =
 
-    // ── Progress section ─────────────────────────────────────────────────
+    // â”€â”€ Progress section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     '<div class="mb-6">' +
       // Question counter aur score
       '<div class="flex items-center justify-between mb-2.5">' +
         '<span class="text-xs font-bold text-indigo-400/70 uppercase tracking-widest">Question ' + questionNum + ' of ' + totalQ + '</span>' +
         '<span class="text-xs font-semibold text-white/40">Score: ' + score + '/' + currentQuestionIndex + '</span>' +
       '</div>' +
-      // Progress bar — filled portion = completed questions / total
+      // Progress bar â€” filled portion = completed questions / total
       '<div class="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">' +
         '<div class="h-full bg-gradient-to-r from-indigo-500 to-blue-400 rounded-full transition-all duration-500" ' +
              'style="width:' + Math.round((currentQuestionIndex / totalQ) * 100) + '%"></div>' +
       '</div>' +
     '</div>' +
 
-    // ── Question text ─────────────────────────────────────────────────────
+    // â”€â”€ Question text â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     '<div class="mb-7">' +
       '<p class="text-sm text-indigo-400/60 font-semibold uppercase tracking-widest mb-2">Question</p>' +
       '<h3 class="text-lg sm:text-xl font-bold text-white leading-snug">' + escapeHTML(q.question) + '</h3>' +
     '</div>' +
 
-    // ── Option buttons (A, B, C, D) ───────────────────────────────────────
+    // â”€â”€ Option buttons (A, B, C, D) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Har option ke liye:
     //   - id="option-X" taake CSS animation add kar sakein
     //   - onclick="handleAnswer('X')" taake click handle ho
@@ -832,8 +852,8 @@ function renderCurrentQuestion() {
 }
 
 
-// ─── FUNCTION 5: handleAnswer ─────────────────────────────────────────────────
-// User ne koi option click kiya — yahan sahi/galat feedback deta hai.
+// â”€â”€â”€ FUNCTION 5: handleAnswer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// User ne koi option click kiya â€” yahan sahi/galat feedback deta hai.
 //
 // LOGIC:
 //   1. Double-click prevent karo (isAnswering flag)
@@ -844,7 +864,7 @@ function renderCurrentQuestion() {
 //   6. Score update karo
 //   7. 1.5 seconds baad next question ya result screen par jao
 //
-// Parameter: selectedLetter — user ne kaunsa option click kiya ('A', 'B', 'C', ya 'D')
+// Parameter: selectedLetter â€” user ne kaunsa option click kiya ('A', 'B', 'C', ya 'D')
 function handleAnswer(selectedLetter) {
 
   // Agar already ek answer process ho raha hai, to dobara click ignore karo
@@ -865,7 +885,7 @@ function handleAnswer(selectedLetter) {
   // Score update karo agar jawab sahi tha
   if (isCorrect) score++;
 
-  // ── Visual feedback (buttons highlight karo) ─────────────────────────────
+  // â”€â”€ Visual feedback (buttons highlight karo) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // SABI buttons disable karo taake koi aur option click na ho sake
   var allBtns = document.querySelectorAll('.quiz-option-btn');
   allBtns.forEach(function(btn) {
@@ -875,13 +895,13 @@ function handleAnswer(selectedLetter) {
   // Clicked option ko red (galat) ya green (sahi) karo
   var clickedBtn = document.getElementById('option-' + selectedLetter);
   if (isCorrect) {
-    // Sahi jawab — green highlight
+    // Sahi jawab â€” green highlight
     clickedBtn.className = clickedBtn.className
       .replace('border-white/8 bg-white/3', '')
       + ' border-green-500/60 bg-green-500/15 shadow-[0_0_20px_rgba(34,197,94,0.20)]';
     clickedBtn.querySelector('.letter-badge').classList.add('bg-green-500', 'border-green-400', 'text-white');
   } else {
-    // Galat jawab — red highlight karo
+    // Galat jawab â€” red highlight karo
     clickedBtn.className = clickedBtn.className
       .replace('border-white/8 bg-white/3', '')
       + ' border-red-500/60 bg-red-500/12 shadow-[0_0_20px_rgba(239,68,68,0.18)]';
@@ -895,17 +915,17 @@ function handleAnswer(selectedLetter) {
     correctBtn.querySelector('.letter-badge').classList.add('bg-green-500', 'border-green-400', 'text-white');
   }
 
-  // ── 1.5 seconds baad next step par jao ──────────────────────────────────
+  // â”€â”€ 1.5 seconds baad next step par jao â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   setTimeout(function() {
 
     var nextIndex = currentQuestionIndex + 1;
 
     if (nextIndex < questions.length) {
-      // Aur questions hain — agla dikhaao
+      // Aur questions hain â€” agla dikhaao
       currentQuestionIndex = nextIndex;
       renderCurrentQuestion();
     } else {
-      // Saare questions khatam — result screen dikhaao
+      // Saare questions khatam â€” result screen dikhaao
       showResultScreen();
     }
 
@@ -913,7 +933,7 @@ function handleAnswer(selectedLetter) {
 }
 
 
-// ─── FUNCTION 6: showResultScreen ────────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 6: showResultScreen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Quiz khatam hone ke baad score aur breakdown dikhata hai.
 function showResultScreen() {
 
@@ -936,7 +956,7 @@ function showResultScreen() {
     scoreColorClass = 'text-orange-400';
   }
 
-  // ── Answer breakdown — har question ka sahi/galat dikhana ────────────────
+  // â”€â”€ Answer breakdown â€” har question ka sahi/galat dikhana â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var breakdownHTML = questions.map(function(q, idx) {
     var ua         = userAnswers[idx];
     var wasCorrect = ua && ua.wasRight;
@@ -948,11 +968,11 @@ function showResultScreen() {
         (wasCorrect ? '&#10003;' : '&#10007;') +
       '</span>' +
       '<div class="flex-1 min-w-0">' +
-        '<p class="text-xs text-white/55 font-medium leading-snug mb-0.5">' + escapeHTML(q.question.slice(0, 80) + (q.question.length > 80 ? '…' : '')) + '</p>' +
+        '<p class="text-xs text-white/55 font-medium leading-snug mb-0.5">' + escapeHTML(q.question.slice(0, 80) + (q.question.length > 80 ? 'â€¦' : '')) + '</p>' +
         '<p class="text-xs ' + (wasCorrect ? 'text-green-400/70' : 'text-red-400/70') + '">' +
           (wasCorrect
-            ? 'Sahi ✓ — ' + q.options[q.correct]
-            : 'Galat — Sahi: ' + q.options[q.correct]) +
+            ? 'Sahi âœ“ â€” ' + q.options[q.correct]
+            : 'Galat â€” Sahi: ' + q.options[q.correct]) +
         '</p>' +
       '</div>' +
     '</div>';
@@ -961,7 +981,7 @@ function showResultScreen() {
   var quizContent = document.getElementById('quizContent');
   quizContent.innerHTML =
 
-    // ── Score card ────────────────────────────────────────────────────────
+    // â”€â”€ Score card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     '<div class="text-center mb-6">' +
       '<div class="text-4xl mb-3" aria-hidden="true">' + resultEmoji + '</div>' +
       '<h3 class="text-2xl font-extrabold ' + scoreColorClass + ' mb-1">' +
@@ -981,13 +1001,13 @@ function showResultScreen() {
       '<p class="text-xs text-white/25 mt-1.5">' + percentage + '% correct</p>' +
     '</div>' +
 
-    // ── Breakdown ─────────────────────────────────────────────────────────
+    // â”€â”€ Breakdown â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     '<div class="mb-6">' +
       '<p class="text-xs font-bold text-white/35 uppercase tracking-widest mb-3">Answer Breakdown</p>' +
       breakdownHTML +
     '</div>' +
 
-    // ── Buttons — Restart ya New Topic ────────────────────────────────────
+    // â”€â”€ Buttons â€” Restart ya New Topic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     '<div class="flex gap-3">' +
       '<button onclick="restartQuiz()" ' +
               'class="flex-1 bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-400 font-bold py-3 rounded-xl text-sm transition-all">' +
@@ -1001,7 +1021,7 @@ function showResultScreen() {
 }
 
 
-// ─── FUNCTION 7: restartQuiz ─────────────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 7: restartQuiz â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Same questions ke saath quiz dobara shuru karta hai (state reset).
 function restartQuiz() {
   currentQuestionIndex = 0;
@@ -1012,7 +1032,7 @@ function restartQuiz() {
 }
 
 
-// ─── FUNCTION 8: newQuiz ──────────────────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 8: newQuiz â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Left panel input clear karke empty state par wapis jata hai.
 function newQuiz() {
   questions            = [];
@@ -1026,19 +1046,19 @@ function newQuiz() {
 }
 
 
-// ─── FUNCTION 9: showState ───────────────────────────────────────────────────
-// Quiz zone ka "state" change karta hai — ek state dikhata aur baaki chhupata hai.
+// â”€â”€â”€ FUNCTION 9: showState â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Quiz zone ka "state" change karta hai â€” ek state dikhata aur baaki chhupata hai.
 //
 // STATES:
-//   'empty'   → placeholder card (quiz shuru hone se pehle)
-//   'loading' → spinner (API call chal rahi hai)
-//   'quiz'    → active quiz (questions aur options)
+//   'empty'   â†’ placeholder card (quiz shuru hone se pehle)
+//   'loading' â†’ spinner (API call chal rahi hai)
+//   'quiz'    â†’ active quiz (questions aur options)
 //
 // HOW IT WORKS (beginner explanation):
 //   Har state ek alag <div> hai HTML mein. Yeh function:
 //     1. Saare states hide karta hai (.classList.add('hidden'))
 //     2. Sirf requested state dikhata hai (.classList.remove('hidden'))
-//   Yeh sab se simple "tab switching" logic hai — koi fancy library nahi!
+//   Yeh sab se simple "tab switching" logic hai â€” koi fancy library nahi!
 function showState(state) {
   // Saare zone divs chhupa do
   document.getElementById('emptyState').classList.add('hidden');
@@ -1052,7 +1072,7 @@ function showState(state) {
 }
 
 
-// ─── FUNCTION 10: showError ──────────────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 10: showError â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Error message quiz zone mein dikhata hai.
 function showError(message) {
   showState('quiz');
@@ -1068,7 +1088,7 @@ function showError(message) {
 }
 
 
-// ─── HELPER: fillTopic ───────────────────────────────────────────────────────
+// â”€â”€â”€ HELPER: fillTopic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Example chip click karne par topic input fill karta hai.
 function fillTopic(text) {
   document.getElementById('topicInput').value = text;
@@ -1076,7 +1096,7 @@ function fillTopic(text) {
 }
 
 
-// ─── HELPER: escapeHTML ───────────────────────────────────────────────────────
+// â”€â”€â”€ HELPER: escapeHTML â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // HTML special characters ko safe text mein convert karta hai (XSS prevention).
 // AI ke text ko innerHTML mein daalne se pehle hamesha yeh function call karo.
 function escapeHTML(str) {
@@ -1086,7 +1106,7 @@ function escapeHTML(str) {
 }
 
 
-// ─── KEYBOARD SHORTCUT ────────────────────────────────────────────────────────
+// â”€â”€â”€ KEYBOARD SHORTCUT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Topic input mein Enter press karne par generateQuiz() call hota hai.
 document.getElementById('topicInput').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') generateQuiz();

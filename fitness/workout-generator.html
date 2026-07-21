@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--
   FILE     : /fitness/workout-generator.html
   WEBSITE  : easyaitoolz.com
-  PURPOSE  : AI Workout Plan Generator — Health & Fitness Suite
+  PURPOSE  : AI Workout Plan Generator â€” Health & Fitness Suite
   TECH     : HTML5 + Tailwind CSS CDN + Vanilla JavaScript
 
   HOW THIS TOOL WORKS:
@@ -11,7 +11,7 @@
   2. User clicks "Generate My Plan"
   3. JavaScript builds a detailed AI prompt from those 4 values
   4. A POST request goes to /api/generate (our secure Cloudflare backend)
-  5. The backend calls Google Gemini (API key is hidden server-side — never exposed)
+  5. The backend calls Google Gemini (API key is hidden server-side â€” never exposed)
   6. The AI response is parsed by day ("DAY 1:", "DAY 2:", etc.)
   7. Each day is rendered as a beautiful expandable card on the right panel
 -->
@@ -20,6 +20,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%234F46E5'/><stop offset='100%' style='stop-color:%23EC4899'/></linearGradient></defs><rect width='100' height='100' rx='20' fill='url(%23g)'/><text y='.9em' font-size='70' x='15'>⚡</text></svg>" />
   <title>AI Workout Plan Generator &mdash; EasyAIToolz</title>
   <meta name="description" content="Get a free personalized weekly workout plan built by AI. Choose your goal, level, equipment, and schedule. No signup needed." />
 
@@ -28,7 +29,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
-  <!-- Tailwind CSS CDN — gives us utility classes like bg-slate-900, text-emerald-400 -->
+  <!-- Tailwind CSS CDN â€” gives us utility classes like bg-slate-900, text-emerald-400 -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -41,7 +42,7 @@
   </script>
 
   <style>
-    /* ── BASE ─────────────────────────────────────────────────────────────────
+    /* â”€â”€ BASE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Exact same dark base as the homepage for design consistency. */
     body {
       background-color: #06080f;
@@ -50,8 +51,8 @@
       overflow-x: hidden;
     }
 
-    /* ── MESH GRADIENT BACKGROUND ─────────────────────────────────────────────
-       Three layered radial gradients — same aurora effect as the homepage.
+    /* â”€â”€ MESH GRADIENT BACKGROUND â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       Three layered radial gradients â€” same aurora effect as the homepage.
        Green-tinted to match the Health & Fitness suite color theme. */
     .mesh-bg {
       background-color: #06080f;
@@ -61,8 +62,8 @@
         radial-gradient(ellipse 40% 30% at 50% 85%, rgba(56,100,255,.06) 0%, transparent 50%);
     }
 
-    /* ── FROSTED GLASS NAVBAR ────────────────────────────────────────────────
-       Blurs content behind the navbar — same as all pages on this site. */
+    /* â”€â”€ FROSTED GLASS NAVBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       Blurs content behind the navbar â€” same as all pages on this site. */
     .navbar-glass {
       background: rgba(6, 8, 15, 0.82);
       backdrop-filter: blur(16px);
@@ -70,7 +71,7 @@
       border-bottom: 1px solid rgba(255,255,255,.06);
     }
 
-    /* ── GRADIENT TEXT ───────────────────────────────────────────────────────
+    /* â”€â”€ GRADIENT TEXT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Clips a green-to-blue gradient to text.
        Health suite uses emerald-to-blue instead of blue-to-purple. */
     .gradient-text {
@@ -80,15 +81,15 @@
       background-clip: text;
     }
 
-    /* ── INPUT FIELDS ────────────────────────────────────────────────────────
-       Emerald glow ring on focus — matches the green health theme. */
+    /* â”€â”€ INPUT FIELDS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       Emerald glow ring on focus â€” matches the green health theme. */
     .input-field:focus {
       outline: none;
       box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.35);
       border-color: rgba(52, 211, 153, 0.45);
     }
 
-    /* ── DROPDOWN ARROW ──────────────────────────────────────────────────────
+    /* â”€â”€ DROPDOWN ARROW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Custom SVG arrow replaces the browser's default dropdown icon.
        background-image adds the small arrow on the right side. */
     .custom-select {
@@ -98,7 +99,7 @@
       padding-right: 40px;
     }
 
-    /* ── GENERATE BUTTON ────────────────────────────────────────────────────
+    /* â”€â”€ GENERATE BUTTON â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Green gradient button with a soft glow shadow.
        Lifts slightly on hover (translateY -1px). */
     .btn-generate {
@@ -110,7 +111,7 @@
     .btn-generate:hover:not(:disabled)  { background-position: right center; transform: translateY(-1px); }
     .btn-generate:disabled              { opacity: 0.45; cursor: not-allowed; }
 
-    /* ── SPINNER ─────────────────────────────────────────────────────────────
+    /* â”€â”€ SPINNER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Simple CSS rotating ring for the loading state. */
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner {
@@ -123,17 +124,36 @@
       vertical-align: middle;
     }
 
-    /* ── CARD HOVER EFFECT ────────────────────────────────────────────────── */
+    /* â”€â”€ CARD HOVER EFFECT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     .day-card { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
     .day-card:hover { box-shadow: 0 0 0 1px rgba(16,185,129,0.25); }
 
-    /* ── SCROLLBAR ───────────────────────────────────────────────────────── */
+    /* â”€â”€ SCROLLBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     ::-webkit-scrollbar       { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #0d1117; }
     ::-webkit-scrollbar-thumb { background: #1a3a2a; border-radius: 4px; }
 
     html { scroll-behavior: smooth; }
   </style>
+
+  <!-- â”€â”€â”€ SEO: Open Graph â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:site_name"   content="EasyAIToolz" />
+  <meta property="og:title"       content="AI Workout Generator - Custom Exercise Plans Free | EasyAIToolz" />
+  <meta property="og:description" content="Generate a personalized workout plan for your fitness goals, equipment and experience level. Free AI personal trainer." />
+  <meta property="og:url"         content="https://easyaitoolz.ranahammad9995.workers.dev/fitness/workout-generator.html" />
+  <meta property="og:image"       content="https://easyaitoolz.ranahammad9995.workers.dev/og-image.png" />
+  <meta property="og:image:width"  content="1200" />
+  <meta property="og:image:height" content="630" />
+  <!-- â”€â”€â”€ SEO: Twitter Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:title"       content="AI Workout Generator - Custom Exercise Plans Free | EasyAIToolz" />
+  <meta name="twitter:description" content="Generate a personalized workout plan for your fitness goals, equipment and experience level. Free AI personal trainer." />
+  <meta name="twitter:image"       content="https://easyaitoolz.ranahammad9995.workers.dev/og-image.png" />
+  <!-- â”€â”€â”€ SEO: Canonical + Keywords â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <link rel="canonical" href="https://easyaitoolz.ranahammad9995.workers.dev/fitness/workout-generator.html" />
+  <meta name="keywords" content="workout generator, ai fitness planner, exercise plan, gym workout, free workout creator" />
+  <meta name="robots"   content="index, follow" />
 </head>
 
 
@@ -151,7 +171,7 @@
       <!-- LEFT: Back button + thin divider + logo -->
       <div class="flex items-center gap-4">
 
-        <!-- &#8592; = HTML entity for ← left arrow -->
+        <!-- &#8592; = HTML entity for â† left arrow -->
         <a href="/" class="flex items-center gap-1.5 text-white/45 hover:text-white/85 transition-colors text-sm font-medium group" aria-label="Back to homepage">
           <span class="group-hover:-translate-x-0.5 transition-transform inline-block">&#8592;</span>
           <span class="hidden sm:inline">Back</span>
@@ -159,7 +179,7 @@
 
         <div class="w-px h-5 bg-white/10" aria-hidden="true"></div>
 
-        <!-- Brand logo — same inline SVG chip as the homepage -->
+        <!-- Brand logo â€” same inline SVG chip as the homepage -->
         <a href="/" class="flex items-center gap-2" aria-label="EasyAIToolz Home">
           <svg width="22" height="22" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <defs>
@@ -213,7 +233,7 @@
       <span class="text-emerald-400">Workout Generator</span>
     </div>
 
-    <!-- Main h1 heading — most important element for SEO -->
+    <!-- Main h1 heading â€” most important element for SEO -->
     <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight mb-3">
       <span class="gradient-text">AI Workout</span>
       <span class="text-white"> Plan Generator</span>
@@ -229,11 +249,11 @@
 
 
 <!-- ==============================================================================
-     MAIN WORKSPACE — The two-column interactive tool
+     MAIN WORKSPACE â€” The two-column interactive tool
      ==============================================================================
 
   LAYOUT EXPLAINED:
-  ─────────────────
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   On DESKTOP (lg = screens wider than 1024px):
     The content splits into TWO equal columns side by side:
       LEFT  = Input panel (your fitness details)
@@ -243,10 +263,10 @@
     Both columns stack vertically (left panel on top, right panel below)
 
   CSS classes:
-    grid grid-cols-1        → 1 column on mobile
-    lg:grid-cols-[400px_1fr]→ fixed 400px left, remaining space for right on desktop
-    gap-6                   → 24px gap between columns
-    items-start             → both columns anchor to the top
+    grid grid-cols-1        â†’ 1 column on mobile
+    lg:grid-cols-[400px_1fr]â†’ fixed 400px left, remaining space for right on desktop
+    gap-6                   â†’ 24px gap between columns
+    items-start             â†’ both columns anchor to the top
 -->
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
   <div class="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-6 items-start">
@@ -257,7 +277,7 @@
          ============================================================ -->
     <div class="flex flex-col gap-5">
 
-      <!-- Main input card — dark semi-transparent container -->
+      <!-- Main input card â€” dark semi-transparent container -->
       <div class="bg-slate-900/60 border border-white/[.08] rounded-2xl p-6">
 
         <h2 class="text-sm font-bold text-white mb-6 flex items-center gap-2">
@@ -266,7 +286,7 @@
         </h2>
 
 
-        <!-- ── DROPDOWN 1: FITNESS GOAL ─────────────────────────────────────
+        <!-- â”€â”€ DROPDOWN 1: FITNESS GOAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              What result does the user want from their training?
              This becomes the primary directive in the AI system prompt.
         -->
@@ -284,7 +304,7 @@
         </div>
 
 
-        <!-- ── DROPDOWN 2: EXPERIENCE LEVEL ────────────────────────────────
+        <!-- â”€â”€ DROPDOWN 2: EXPERIENCE LEVEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              Beginner = simpler exercises, more rest, fewer sets.
              Advanced = complex movements, progressive overload focus.
         -->
@@ -300,9 +320,9 @@
         </div>
 
 
-        <!-- ── DROPDOWN 3: AVAILABLE EQUIPMENT ─────────────────────────────
+        <!-- â”€â”€ DROPDOWN 3: AVAILABLE EQUIPMENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              The AI adapts the exercise selection based on what gear is available.
-             "Home / Bodyweight" means no weights at all — uses push-ups, squats, etc.
+             "Home / Bodyweight" means no weights at all â€” uses push-ups, squats, etc.
              "Full Gym" allows barbells, cables, machines, everything.
         -->
         <div class="mb-5">
@@ -318,7 +338,7 @@
         </div>
 
 
-        <!-- ── DROPDOWN 4: DAYS PER WEEK ────────────────────────────────────
+        <!-- â”€â”€ DROPDOWN 4: DAYS PER WEEK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              Controls how many training days the AI plans out.
              The remaining days are assigned as rest/recovery days.
         -->
@@ -335,7 +355,7 @@
         </div>
 
 
-        <!-- ── GENERATE BUTTON ────────────────────────────────────────────────
+        <!-- â”€â”€ GENERATE BUTTON â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              onclick="generatePlan()" calls our main JS function.
              id="generateBtn" lets JS disable it while the API call runs.
              id="btnText" and id="btnIcon" = JS updates them to show loading state.
@@ -357,7 +377,7 @@
         <p class="text-xs font-bold text-emerald-400/75 mb-3 uppercase tracking-widest">How It Works</p>
         <ol class="text-xs text-white/35 space-y-2 list-decimal list-inside leading-relaxed">
           <li>Choose your goal, level, equipment, and weekly frequency</li>
-          <li>Click Generate — AI reads your exact parameters</li>
+          <li>Click Generate â€” AI reads your exact parameters</li>
           <li>Your personalized plan appears as day-by-day cards on the right</li>
           <li>Copy the plan and track your progress</li>
         </ol>
@@ -393,7 +413,7 @@
             <h2 class="text-sm font-semibold text-white/80">Your Workout Plan</h2>
           </div>
 
-          <!-- Copy Plan button — hidden until a plan is generated -->
+          <!-- Copy Plan button â€” hidden until a plan is generated -->
           <!-- id="copyBtn" lets JS show/hide it and update its label -->
           <button
             id="copyBtn"
@@ -405,7 +425,7 @@
           </button>
         </div>
 
-        <!-- ── OUTPUT BOX ─────────────────────────────────────────────────────
+        <!-- â”€â”€ OUTPUT BOX â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              This <div id="outputBox"> is where JavaScript renders the workout plan.
              Initially it shows an empty-state prompt to the user.
              After the AI responds, renderDayCards() replaces all of this HTML
@@ -476,7 +496,7 @@
 
 
 <!-- ==============================================================================
-     JAVASCRIPT — embedded from workout_logic.js at build time
+     JAVASCRIPT â€” embedded from workout_logic.js at build time
      Placed at the BOTTOM so all HTML is parsed and ready first.
      ============================================================================== -->
 <script>
@@ -487,7 +507,7 @@
 // ============================================================
 
 
-// ─── FUNCTION 1: generatePlan ────────────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 1: generatePlan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // The main function. Runs when the user clicks "Generate My Plan".
 //
 // FULL DATA FLOW:
@@ -500,7 +520,7 @@
 //   Step 7: Reset the button back to normal
 async function generatePlan() {
 
-  // ── STEP 1: Read all 4 dropdown values ──────────────────────────────────
+  // â”€â”€ STEP 1: Read all 4 dropdown values â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // getElementById finds the HTML element by its id="..." attribute.
   // .value reads whichever option the user currently has selected.
   var goal      = document.getElementById('goalSelect').value;
@@ -508,7 +528,7 @@ async function generatePlan() {
   var equipment = document.getElementById('equipmentSelect').value;
   var days      = document.getElementById('daysSelect').value;
 
-  // ── STEP 2: Build the AI System Prompt ──────────────────────────────────
+  // â”€â”€ STEP 2: Build the AI System Prompt â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // We wrap the user's 4 choices in expert instructions so the AI knows
   // exactly what to produce.
   //
@@ -531,7 +551,7 @@ async function generatePlan() {
     '6. Do NOT include any introduction, explanation, or closing remarks\n' +
     '7. Output ONLY the structured plan, nothing else';
 
-  // ── STEP 3: Set the UI to Loading State ─────────────────────────────────
+  // â”€â”€ STEP 3: Set the UI to Loading State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // While we wait for the AI (usually 3-6 seconds), update the screen so
   // the user knows something is happening.
   var btn       = document.getElementById('generateBtn');
@@ -553,7 +573,7 @@ async function generatePlan() {
       '<p class="text-white/25 text-xs">This usually takes 3-6 seconds</p>' +
     '</div>';
 
-  // ── STEP 4 + 5: Send POST request and wait for AI response ──────────────
+  // â”€â”€ STEP 4 + 5: Send POST request and wait for AI response â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // fetch() sends an HTTP POST to our secure backend at /api/generate.
   // "async/await" means: run this line and WAIT for the result before continuing.
   // try/catch means: if anything goes wrong (network down, server error),
@@ -574,7 +594,7 @@ async function generatePlan() {
     // Parse the JSON response the backend sends back
     var data = await response.json();
 
-    // ── STEP 6: Parse and Render the Result ─────────────────────────────
+    // â”€â”€ STEP 6: Parse and Render the Result â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (data.result) {
       // SUCCESS: render the workout plan as beautiful day cards
       renderDayCards(data.result.trim(), goal, level, days);
@@ -592,15 +612,15 @@ async function generatePlan() {
     );
   }
 
-  // ── STEP 7: Reset the button ─────────────────────────────────────────────
+  // â”€â”€ STEP 7: Reset the button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Always re-enable the button so the user can generate again.
   btn.disabled        = false;
   btnText.textContent = 'Generate My Plan';
-  btnIcon.textContent = '\u2192'; // → right arrow
+  btnIcon.textContent = '\u2192'; // â†’ right arrow
 }
 
 
-// ─── FUNCTION 2: renderDayCards ──────────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 2: renderDayCards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Takes the raw AI text and splits it into individual day cards.
 //
 // HOW THE PARSING WORKS:
@@ -620,9 +640,9 @@ function renderDayCards(planText, goal, level, daysLabel) {
   // Store the raw text for the copy function
   window._currentPlanText = planText;
 
-  // ── Parse the AI text into day sections ─────────────────────────────────
+  // â”€â”€ Parse the AI text into day sections â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // regex: /(?=DAY \d+:)/i means "split at any position followed by DAY + number + colon"
-  // (?= ) is a "lookahead" — it splits WITHOUT removing the "DAY N:" prefix
+  // (?= ) is a "lookahead" â€” it splits WITHOUT removing the "DAY N:" prefix
   var sections = planText.split(/(?=DAY \d+:)/i).filter(function(s) {
     return s.trim().length > 0;
   });
@@ -635,7 +655,7 @@ function renderDayCards(planText, goal, level, daysLabel) {
     return;
   }
 
-  // ── Build the plan summary header ────────────────────────────────────────
+  // â”€â”€ Build the plan summary header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var headerHTML =
     '<div class="mb-6 p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5">' +
       '<div class="flex flex-wrap items-center gap-3">' +
@@ -647,7 +667,7 @@ function renderDayCards(planText, goal, level, daysLabel) {
       '</div>' +
     '</div>';
 
-  // ── Render each day section as a card ────────────────────────────────────
+  // â”€â”€ Render each day section as a card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // map() transforms each section string into an HTML card string.
   // join('') merges all the card strings into one big HTML string.
   var dayCardsHTML = sections.map(function(section, index) {
@@ -707,7 +727,7 @@ function renderDayCards(planText, goal, level, daysLabel) {
 }
 
 
-// ─── FUNCTION 3: showError ────────────────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 3: showError â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Displays an error message inside the output box.
 // Keeps the UI clean instead of showing a raw JavaScript error.
 function showError(message) {
@@ -728,9 +748,9 @@ function showError(message) {
 }
 
 
-// ─── FUNCTION 4: copyPlan ─────────────────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 4: copyPlan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Copies the full raw workout plan text to the clipboard.
-// Uses navigator.clipboard.writeText() — the modern standard clipboard API.
+// Uses navigator.clipboard.writeText() â€” the modern standard clipboard API.
 async function copyPlan() {
   var textToCopy = window._currentPlanText;
 
@@ -761,9 +781,9 @@ async function copyPlan() {
 }
 
 
-// ─── HELPER: escapeHTML ───────────────────────────────────────────────────────
+// â”€â”€â”€ HELPER: escapeHTML â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Converts special HTML characters to safe entities.
-// This PREVENTS "XSS injection" — if the AI returned <script> tags,
+// This PREVENTS "XSS injection" â€” if the AI returned <script> tags,
 // this function turns them into harmless &lt;script&gt; text.
 // ALWAYS escape untrusted content before putting it in innerHTML.
 function escapeHTML(str) {

@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--
   FILE     : /developer/sql-generator.html
   WEBSITE  : easyaitoolz.com
-  PURPOSE  : AI-powered SQL Query Generator — converts plain English to SQL
+  PURPOSE  : AI-powered SQL Query Generator â€” converts plain English to SQL
   TECH     : HTML5 + Tailwind CSS CDN + Vanilla JavaScript
 
   HOW THIS PAGE WORKS:
@@ -19,11 +19,12 @@
 
 
 <!-- ==================================================================
-     HEAD — Setup: fonts, Tailwind, custom CSS (nothing visible here)
+     HEAD â€” Setup: fonts, Tailwind, custom CSS (nothing visible here)
      ================================================================== -->
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%234F46E5'/><stop offset='100%' style='stop-color:%23EC4899'/></linearGradient></defs><rect width='100' height='100' rx='20' fill='url(%23g)'/><text y='.9em' font-size='70' x='15'>⚡</text></svg>" />
   <title>AI SQL Query Generator &mdash; EasyAIToolz</title>
   <meta name="description" content="Generate optimized SQL queries instantly from plain English. Supports MySQL, PostgreSQL, SQL Server, Oracle, and SQLite. Free, no signup." />
 
@@ -50,7 +51,7 @@
   </script>
 
   <style>
-    /* ── BASE ──────────────────────────────────────────────────────────────
+    /* â”€â”€ BASE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Same dark background as the homepage for visual consistency. */
     body {
       background-color: #06080f;
@@ -59,7 +60,7 @@
       overflow-x: hidden;
     }
 
-    /* ── MESH GRADIENT BACKGROUND ──────────────────────────────────────────
+    /* â”€â”€ MESH GRADIENT BACKGROUND â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Three layered radial gradients create a soft "aurora" glow effect.
        Each gradient is a colored ellipse fading to transparent. */
     .mesh-bg {
@@ -70,7 +71,7 @@
         radial-gradient(ellipse 40% 30% at 50% 90%, rgba(236,72,153,.06) 0%, transparent 50%);
     }
 
-    /* ── FROSTED GLASS NAVBAR ──────────────────────────────────────────────
+    /* â”€â”€ FROSTED GLASS NAVBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        backdrop-filter: blur blurs all content BEHIND the navbar element. */
     .navbar-glass {
       background: rgba(6, 8, 15, 0.82);
@@ -79,7 +80,7 @@
       border-bottom: 1px solid rgba(255,255,255,.06);
     }
 
-    /* ── GRADIENT TEXT ─────────────────────────────────────────────────────
+    /* â”€â”€ GRADIENT TEXT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Clips a blue-to-purple gradient to the text boundary. */
     .gradient-text {
       background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 60%, #f472b6 100%);
@@ -88,7 +89,7 @@
       background-clip: text;
     }
 
-    /* ── INPUT FOCUS RING ──────────────────────────────────────────────────
+    /* â”€â”€ INPUT FOCUS RING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        A soft blue glow ring appears when the user clicks any input/select. */
     .input-field:focus {
       outline: none;
@@ -96,7 +97,7 @@
       border-color: rgba(96, 165, 250, 0.50);
     }
 
-    /* ── TERMINAL OUTPUT BOX ───────────────────────────────────────────────
+    /* â”€â”€ TERMINAL OUTPUT BOX â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Styled to look like a real code editor / terminal window.
        JetBrains Mono is a monospace font designed for reading code. */
     .terminal-box {
@@ -105,12 +106,12 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 0.82rem;
       line-height: 1.7;
-      color: #7dd3fc;          /* sky blue — classic terminal text color */
+      color: #7dd3fc;          /* sky blue â€” classic terminal text color */
       white-space: pre-wrap;   /* preserves newlines and indentation in SQL */
       word-break: break-word;
     }
 
-    /* ── GENERATE BUTTON ───────────────────────────────────────────────────
+    /* â”€â”€ GENERATE BUTTON â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Eye-catching gradient button. Glows blue on hover.
        :disabled = grayed out while the API call is in progress. */
     .btn-generate {
@@ -121,12 +122,12 @@
     .btn-generate:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
     .btn-generate:disabled             { opacity: 0.45; cursor: not-allowed; }
 
-    /* ── COPY BUTTON ───────────────────────────────────────────────────────
+    /* â”€â”€ COPY BUTTON â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Small button in the terminal title bar. Lights up blue on hover. */
     .btn-copy { transition: background 0.2s ease, color 0.2s ease; }
     .btn-copy:hover { background: rgba(96,165,250,.15); color: #93c5fd; }
 
-    /* ── LOADING SPINNER ───────────────────────────────────────────────────
+    /* â”€â”€ LOADING SPINNER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        CSS-only rotating ring shown while the API call is in progress.
        @keyframes spin defines a 360-degree rotation animation. */
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -140,7 +141,7 @@
       vertical-align: middle;
     }
 
-    /* ── CUSTOM SCROLLBARS ─────────────────────────────────────────────────
+    /* â”€â”€ CUSTOM SCROLLBARS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Thin, dark scrollbars that match the dark theme. */
     ::-webkit-scrollbar       { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #0d1117; }
@@ -148,11 +149,30 @@
 
     html { scroll-behavior: smooth; }
   </style>
+
+  <!-- â”€â”€â”€ SEO: Open Graph â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:site_name"   content="EasyAIToolz" />
+  <meta property="og:title"       content="AI SQL Generator - Write SQL Queries Instantly | EasyAIToolz" />
+  <meta property="og:description" content="Generate complex SQL queries from plain English descriptions. Supports SELECT, JOIN, GROUP BY and more. Free AI SQL writer." />
+  <meta property="og:url"         content="https://easyaitoolz.ranahammad9995.workers.dev/developer/sql-generator.html" />
+  <meta property="og:image"       content="https://easyaitoolz.ranahammad9995.workers.dev/og-image.png" />
+  <meta property="og:image:width"  content="1200" />
+  <meta property="og:image:height" content="630" />
+  <!-- â”€â”€â”€ SEO: Twitter Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:title"       content="AI SQL Generator - Write SQL Queries Instantly | EasyAIToolz" />
+  <meta name="twitter:description" content="Generate complex SQL queries from plain English descriptions. Supports SELECT, JOIN, GROUP BY and more. Free AI SQL writer." />
+  <meta name="twitter:image"       content="https://easyaitoolz.ranahammad9995.workers.dev/og-image.png" />
+  <!-- â”€â”€â”€ SEO: Canonical + Keywords â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <link rel="canonical" href="https://easyaitoolz.ranahammad9995.workers.dev/developer/sql-generator.html" />
+  <meta name="keywords" content="sql generator, ai sql, sql query builder, natural language to sql, free sql tool" />
+  <meta name="robots"   content="index, follow" />
 </head>
 
 
 <!-- ==================================================================
-     BODY — Everything the user sees on screen
+     BODY â€” Everything the user sees on screen
      ================================================================== -->
 <body class="mesh-bg min-h-screen">
 
@@ -252,7 +272,7 @@
 
 
 <!-- ==================================================================
-     MAIN WORKSPACE — The two-column interactive tool area
+     MAIN WORKSPACE â€” The two-column interactive tool area
      ================================================================== -->
 <!--
   TWO-COLUMN LAYOUT EXPLAINED:
@@ -473,7 +493,7 @@
              overlaid on the left side of the terminal box.
 
              The <pre> element (id="sqlOutput") is where JS puts the SQL result.
-             pre = "preformatted" — preserves spaces and newlines exactly as-is.
+             pre = "preformatted" â€” preserves spaces and newlines exactly as-is.
              terminal-box class = monospace font, blue terminal text color.
         -->
         <div class="relative">
@@ -551,12 +571,12 @@
 
 <!-- ==================================================================
      JAVASCRIPT
-     Placed at the BOTTOM of the body — ensures all HTML loads first.
+     Placed at the BOTTOM of the body â€” ensures all HTML loads first.
      The logic is embedded from sql_logic.js at build time.
      ================================================================== -->
 <script>
 // ============================================================
-// sql_logic.js  —  The JavaScript for the SQL Generator tool
+// sql_logic.js  â€”  The JavaScript for the SQL Generator tool
 // This file is read by write_sql_generator.js and embedded
 // into the final sql-generator.html file automatically.
 // ============================================================
@@ -589,7 +609,7 @@ async function generateSQL() {
   var dialect    = document.getElementById('dialectSelect').value;
   var userPrompt = document.getElementById('promptInput').value.trim();
 
-  // STEP 2: Validate — don't send a blank prompt to the AI
+  // STEP 2: Validate â€” don't send a blank prompt to the AI
   if (!userPrompt) {
     document.getElementById('sqlOutput').textContent =
       '-- Please describe what SQL query you need in the text area,\n' +
@@ -600,7 +620,7 @@ async function generateSQL() {
 
   // STEP 3: Build the AI system prompt
   // This wraps the user's plain English in precise instructions
-  // so the AI returns ONLY clean SQL code — no extra chat or explanations.
+  // so the AI returns ONLY clean SQL code â€” no extra chat or explanations.
   var systemPrompt =
     'You are an expert SQL database engineer with 15 years of experience. ' +
     'Your ONLY job is to convert the user request into a correct, clean, and well-formatted ' +
@@ -671,7 +691,7 @@ async function generateSQL() {
   // STEP 8: Re-enable the button so the user can generate again
   btn.disabled        = false;
   btnText.textContent = 'Generate SQL Query';
-  btnIcon.textContent = '\u26A1'; // ⚡ lightning bolt
+  btnIcon.textContent = '\u26A1'; // âš¡ lightning bolt
 }
 
 

@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--
   FILE     : /developer/regex-generator.html
   WEBSITE  : easyaitoolz.com
-  PURPOSE  : AI Regex Generator & Explainer — Developer Suite
+  PURPOSE  : AI Regex Generator & Explainer â€” Developer Suite
   TECH     : HTML5 + Tailwind CSS CDN + Vanilla JavaScript
 
   HOW THIS TOOL WORKS:
@@ -12,19 +12,20 @@
   3. JavaScript builds a strict system prompt that forces AI output format:
        [RAW PATTERN]
        ---
-       TOKEN — Plain English explanation
-       TOKEN — Plain English explanation
+       TOKEN â€” Plain English explanation
+       TOKEN â€” Plain English explanation
        ...
-  4. POST to /api/generate — Cloudflare backend calls Gemini (API key hidden)
+  4. POST to /api/generate â€” Cloudflare backend calls Gemini (API key hidden)
   5. parseAndRender() splits the response at "---":
-       Part A → pattern displayed in a syntax-colored code box with flag badges
-       Part B → each TOKEN — Description line becomes a styled table row
+       Part A â†’ pattern displayed in a syntax-colored code box with flag badges
+       Part B â†’ each TOKEN â€” Description line becomes a styled table row
 -->
 <html lang="en">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%234F46E5'/><stop offset='100%' style='stop-color:%23EC4899'/></linearGradient></defs><rect width='100' height='100' rx='20' fill='url(%23g)'/><text y='.9em' font-size='70' x='15'>⚡</text></svg>" />
   <title>AI Regex Generator &amp; Explainer &mdash; EasyAIToolz</title>
   <meta name="description" content="Convert plain English into precise Regular Expressions with a full token-by-token breakdown. Free AI regex generator, no signup required." />
 
@@ -49,7 +50,7 @@
   </script>
 
   <style>
-    /* ── BASE ──────────────────────────────────────────────────────────────*/
+    /* â”€â”€ BASE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     body {
       background-color: #06080f;
       font-family: 'Inter', sans-serif;
@@ -57,8 +58,8 @@
       overflow-x: hidden;
     }
 
-    /* ── MESH GRADIENT BACKGROUND ──────────────────────────────────────────
-       Blue-violet-cyan aurora — a technical, developer-oriented palette.
+    /* â”€â”€ MESH GRADIENT BACKGROUND â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       Blue-violet-cyan aurora â€” a technical, developer-oriented palette.
        Slightly different from the other pages to give the Developer Suite
        its own distinct identity. */
     .mesh-bg {
@@ -69,7 +70,7 @@
         radial-gradient(ellipse 50% 40% at 50% 90%, rgba(6,182,212,.06) 0%, transparent 52%);
     }
 
-    /* ── FROSTED GLASS NAVBAR ─────────────────────────────────────────────*/
+    /* â”€â”€ FROSTED GLASS NAVBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     .navbar-glass {
       background: rgba(6, 8, 15, 0.82);
       backdrop-filter: blur(16px);
@@ -77,8 +78,8 @@
       border-bottom: 1px solid rgba(255,255,255,.06);
     }
 
-    /* ── GRADIENT HEADING TEXT ─────────────────────────────────────────────
-       Blue-to-cyan — clean, techy, precise — perfect for a regex tool. */
+    /* â”€â”€ GRADIENT HEADING TEXT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       Blue-to-cyan â€” clean, techy, precise â€” perfect for a regex tool. */
     .gradient-text {
       background: linear-gradient(135deg, #60a5fa 0%, #818cf8 45%, #34d399 100%);
       -webkit-background-clip: text;
@@ -86,15 +87,15 @@
       background-clip: text;
     }
 
-    /* ── TEXTAREA + INPUT FOCUS ────────────────────────────────────────────*/
+    /* â”€â”€ TEXTAREA + INPUT FOCUS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     .input-field:focus {
       outline: none;
       box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
       border-color: rgba(59, 130, 246, 0.48);
     }
 
-    /* ── GENERATE BUTTON ───────────────────────────────────────────────────
-       Blue-to-indigo gradient — technical and precise feel. */
+    /* â”€â”€ GENERATE BUTTON â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       Blue-to-indigo gradient â€” technical and precise feel. */
     .btn-generate {
       background: linear-gradient(135deg, #2563eb 0%, #4f46e5 50%, #0891b2 100%);
       background-size: 200% 200%;
@@ -104,7 +105,7 @@
     .btn-generate:hover:not(:disabled) { background-position: right center; transform: translateY(-1px); }
     .btn-generate:disabled             { opacity: 0.45; cursor: not-allowed; }
 
-    /* ── SPINNER ───────────────────────────────────────────────────────────*/
+    /* â”€â”€ SPINNER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner {
       width: 17px; height: 17px;
@@ -116,7 +117,7 @@
       vertical-align: middle;
     }
 
-    /* ── CHECKBOX CUSTOM STYLE ─────────────────────────────────────────────
+    /* â”€â”€ CHECKBOX CUSTOM STYLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        The default browser checkbox is ugly. We use a custom styled version.
        The checkbox input is hidden and replaced by a styled <label>. */
     .flag-checkbox-input {
@@ -175,12 +176,12 @@
       opacity: 1;
     }
 
-    /* ══════════════════════════════════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        OUTPUT PANEL STYLES
        Applied by JavaScript's parseAndRender() function.
-       ══════════════════════════════════════════════════════════════════════ */
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-    /* ── PATTERN BOX ────────────────────────────────────────────────────────
+    /* â”€â”€ PATTERN BOX â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        The code terminal box that shows the generated regex pattern.
        Dark background + mono font = feels like a real code editor. */
     .regex-pattern-box {
@@ -194,7 +195,7 @@
       border-color: rgba(255,255,255,0.06);
     }
 
-    /* ── PATTERN DISPLAY ────────────────────────────────────────────────────
+    /* â”€â”€ PATTERN DISPLAY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Where the actual /regex/flags is shown. Uses JetBrains Mono.
        The line-break and word-break ensures long patterns wrap cleanly. */
     .pattern-display {
@@ -217,7 +218,7 @@
     .regex-body  { color: #e2e8f0; }
     .regex-flags { color: #34d399; font-size: 0.85em; }
 
-    /* ── FLAG BADGES ────────────────────────────────────────────────────────
+    /* â”€â”€ FLAG BADGES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Small letter badges shown next to the pattern (g, i, m).
        Active = solid blue, Inactive = dim/transparent. */
     .flag-badge {
@@ -231,7 +232,7 @@
     .flag-badge.active   { background: rgba(59,130,246,0.20); border-color: rgba(59,130,246,0.40); color: #93c5fd; }
     .flag-badge.inactive { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.08); color: rgba(255,255,255,0.22); }
 
-    /* ── EXPLANATION CARD ───────────────────────────────────────────────────
+    /* â”€â”€ EXPLANATION CARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        The card showing the token-by-token breakdown.
        Separated from the pattern box with a gap. */
     .explanation-card {
@@ -242,7 +243,7 @@
       margin-top: 1rem;
     }
 
-    /* ── TOKEN ROW ──────────────────────────────────────────────────────────
+    /* â”€â”€ TOKEN ROW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Each regex token displayed as a two-column flex row:
          [TOKEN CODE]  [Plain English description]
 
@@ -258,7 +259,7 @@
     .token-row:last-child { border-bottom: none; }
     .token-row:nth-child(even) { background: rgba(255,255,255,0.015); border-radius: 0.375rem; }
 
-    /* The TOKEN itself — monospace code font, blue color */
+    /* The TOKEN itself â€” monospace code font, blue color */
     .token-code {
       font-family: 'JetBrains Mono', 'Fira Code', monospace;
       font-size: 0.82rem;
@@ -299,7 +300,7 @@
       line-height: 1.6;
     }
 
-    /* ── EXAMPLE CHIP HOVER ────────────────────────────────────────────────*/
+    /* â”€â”€ EXAMPLE CHIP HOVER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     .example-chip { transition: all 0.2s ease; }
     .example-chip:hover {
       background: rgba(59,130,246,0.12);
@@ -307,13 +308,32 @@
       color: #93c5fd;
     }
 
-    /* ── SCROLLBAR ─────────────────────────────────────────────────────── */
+    /* â”€â”€ SCROLLBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     ::-webkit-scrollbar       { width: 6px; }
     ::-webkit-scrollbar-track { background: #0d1117; }
     ::-webkit-scrollbar-thumb { background: #1e2a50; border-radius: 4px; }
 
     html { scroll-behavior: smooth; }
   </style>
+
+  <!-- â”€â”€â”€ SEO: Open Graph â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:site_name"   content="EasyAIToolz" />
+  <meta property="og:title"       content="AI Regex Generator - Build Regular Expressions Instantly | EasyAIToolz" />
+  <meta property="og:description" content="Describe what you need in plain English and get the perfect regex pattern instantly. Test and explain regex patterns with AI." />
+  <meta property="og:url"         content="https://easyaitoolz.ranahammad9995.workers.dev/developer/regex-generator.html" />
+  <meta property="og:image"       content="https://easyaitoolz.ranahammad9995.workers.dev/og-image.png" />
+  <meta property="og:image:width"  content="1200" />
+  <meta property="og:image:height" content="630" />
+  <!-- â”€â”€â”€ SEO: Twitter Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:title"       content="AI Regex Generator - Build Regular Expressions Instantly | EasyAIToolz" />
+  <meta name="twitter:description" content="Describe what you need in plain English and get the perfect regex pattern instantly. Test and explain regex patterns with AI." />
+  <meta name="twitter:image"       content="https://easyaitoolz.ranahammad9995.workers.dev/og-image.png" />
+  <!-- â”€â”€â”€ SEO: Canonical + Keywords â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <link rel="canonical" href="https://easyaitoolz.ranahammad9995.workers.dev/developer/regex-generator.html" />
+  <meta name="keywords" content="regex generator, regular expression builder, ai regex, regex tester, pattern generator" />
+  <meta name="robots"   content="index, follow" />
 </head>
 
 
@@ -408,11 +428,11 @@
 
 
 <!-- ==============================================================================
-     MAIN WORKSPACE — Two-column layout
+     MAIN WORKSPACE â€” Two-column layout
 
      LAYOUT:
-       MOBILE  (< 1024px)  → 1 column, stacked
-       DESKTOP (>= 1024px) → [420px fixed left] | [flexible right]
+       MOBILE  (< 1024px)  â†’ 1 column, stacked
+       DESKTOP (>= 1024px) â†’ [420px fixed left] | [flexible right]
 
      The left panel is slightly wider than other tools because the textarea
      for the description needs room to be comfortable to type in.
@@ -435,7 +455,7 @@
         </h2>
 
 
-        <!-- ── INPUT 1: PLAIN ENGLISH DESCRIPTION ────────────────────────
+        <!-- â”€â”€ INPUT 1: PLAIN ENGLISH DESCRIPTION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              The user describes WHAT they want the regex to match.
              A textarea (multi-line) is used instead of a single-line input
              because good regex descriptions often need a few sentences.
@@ -461,7 +481,7 @@
             class="input-field w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm placeholder-white/20 transition-colors resize-none leading-relaxed"
           ></textarea>
 
-          <!-- Example description chips — clicking fills the textarea -->
+          <!-- Example description chips â€” clicking fills the textarea -->
           <div class="flex flex-wrap gap-1.5 mt-2.5">
             <button onclick="fillDescription('Match a valid email address')" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">Email address</button>
             <button onclick="fillDescription('Match a URL starting with http or https')" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">HTTP/S URL</button>
@@ -477,7 +497,7 @@
         </div>
 
 
-        <!-- ── INPUT 2: REGEX FLAGS ───────────────────────────────────────
+        <!-- â”€â”€ INPUT 2: REGEX FLAGS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              Regex flags modify HOW the pattern matches.
 
              HOW CHECKBOXES WORK IN JAVASCRIPT:
@@ -487,9 +507,9 @@
                When the label is clicked, the hidden checkbox toggles automatically.
 
              FLAG EXPLANATIONS:
-               g (Global)        → find ALL matches, not just the first one
-               i (Insensitive)   → "Apple" matches "apple", "APPLE", "ApPlE"
-               m (Multiline)     → ^ and $ match start/end of each LINE (not whole string)
+               g (Global)        â†’ find ALL matches, not just the first one
+               i (Insensitive)   â†’ "Apple" matches "apple", "APPLE", "ApPlE"
+               m (Multiline)     â†’ ^ and $ match start/end of each LINE (not whole string)
         -->
         <div class="mb-7">
           <label class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-3">
@@ -498,7 +518,7 @@
 
           <div class="flex flex-col gap-2">
 
-            <!-- FLAG g — Global -->
+            <!-- FLAG g â€” Global -->
             <!-- IMPORTANT: The <input> is hidden (opacity-0, absolute).
                  The <label for="flagG"> is the visible styled element.
                  "for" attribute links the label to the checkbox input by ID. -->
@@ -516,7 +536,7 @@
               </label>
             </div>
 
-            <!-- FLAG i — Case Insensitive -->
+            <!-- FLAG i â€” Case Insensitive -->
             <div class="relative">
               <input type="checkbox" id="flagI" class="flag-checkbox-input" />
               <label for="flagI" class="flag-checkbox-label">
@@ -531,7 +551,7 @@
               </label>
             </div>
 
-            <!-- FLAG m — Multiline -->
+            <!-- FLAG m â€” Multiline -->
             <div class="relative">
               <input type="checkbox" id="flagM" class="flag-checkbox-input" />
               <label for="flagM" class="flag-checkbox-label">
@@ -550,7 +570,7 @@
         </div>
 
 
-        <!-- ── GENERATE BUTTON ────────────────────────────────────────────
+        <!-- â”€â”€ GENERATE BUTTON â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              onclick="generateRegex()" calls the main JS function.
              This button is disabled while the API call runs to prevent
              double-submissions. The text and icon swap to a loading state.
@@ -590,8 +610,8 @@
     <!-- ============================================================
          RIGHT COLUMN: OUTPUT PANEL
          Contains two stacked sections:
-           Part A — The generated regex pattern (code terminal box)
-           Part B — The token-by-token breakdown explanation card
+           Part A â€” The generated regex pattern (code terminal box)
+           Part B â€” The token-by-token breakdown explanation card
 
          lg:sticky lg:top-24 = stays visible while user scrolls on desktop.
          ============================================================ -->
@@ -600,7 +620,7 @@
       <!-- Output container card -->
       <div class="bg-slate-900/60 border border-white/[.08] rounded-2xl overflow-hidden">
 
-        <!-- Panel title bar — code editor chrome feel -->
+        <!-- Panel title bar â€” code editor chrome feel -->
         <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/[.06]" style="background:rgba(10,15,30,0.80)">
           <div class="flex items-center gap-2.5">
             <!-- Editor traffic lights -->
@@ -627,11 +647,11 @@
         </div>
 
 
-        <!-- ── SCROLLABLE OUTPUT AREA ───────────────────────────────────── -->
+        <!-- â”€â”€ SCROLLABLE OUTPUT AREA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
         <div class="overflow-y-auto p-5" style="min-height: 480px; max-height: 78vh;">
 
 
-          <!-- ── EMPTY STATE ─────────────────────────────────────────────────
+          <!-- â”€â”€ EMPTY STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                Shown before the user clicks Generate.
                Includes a decorative regex pattern display. -->
           <div id="emptyState" class="flex flex-col items-center justify-center gap-6 py-12 text-center">
@@ -684,10 +704,10 @@
           </div><!-- end emptyState -->
 
 
-          <!-- ── RESULT AREA ─────────────────────────────────────────────────
+          <!-- â”€â”€ RESULT AREA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                Hidden initially. JavaScript fills this with:
-                 LOADING → skeleton animation
-                 RESULT  → Pattern box (Part A) + Explanation card (Part B)
+                 LOADING â†’ skeleton animation
+                 RESULT  â†’ Pattern box (Part A) + Explanation card (Part B)
 
                JavaScript renderDocument() renders each token as a .token-row:
                  <code class="token-code">TOKEN</code>
@@ -728,7 +748,7 @@
 
 
 <!-- ==============================================================================
-     JAVASCRIPT — regex_logic.js embedded here at build time.
+     JAVASCRIPT â€” regex_logic.js embedded here at build time.
      Placed at bottom of <body> so all HTML elements exist when JS runs.
      ============================================================================== -->
 <script>
@@ -739,35 +759,35 @@
 // ============================================================
 
 
-// ─── FUNCTION 1: generateRegex ───────────────────────────────────────────────
-// The main function. Runs when the user clicks "Generate Regex 🧩".
+// â”€â”€â”€ FUNCTION 1: generateRegex â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// The main function. Runs when the user clicks "Generate Regex ðŸ§©".
 //
 // FULL DATA FLOW:
 //   Step 1: Read the textarea description
 //   Step 2: Read the checkbox flags (g, i, m)
-//   Step 3: Validate — description is required
+//   Step 3: Validate â€” description is required
 //   Step 4: Build the AI system prompt, injecting selected flags
 //   Step 5: Show loading state in the output panel
 //   Step 6: POST to /api/generate (our secure backend)
 //   Step 7: Wait for the AI response
-//   Step 8: Parse the response — split at "---" separator:
-//             Part A (before ---) → raw regex pattern
-//             Part B (after  ---) → token-by-token explanation
+//   Step 8: Parse the response â€” split at "---" separator:
+//             Part A (before ---) â†’ raw regex pattern
+//             Part B (after  ---) â†’ token-by-token explanation
 //   Step 9: Render the pattern box + explanation card
 //   Step 10: Reset the button
 async function generateRegex() {
 
-  // ── STEP 1: Read the plain-English description ───────────────────────────
+  // â”€â”€ STEP 1: Read the plain-English description â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var description = document.getElementById('descriptionInput').value.trim();
 
-  // ── STEP 2: Read flags from checkboxes ──────────────────────────────────
+  // â”€â”€ STEP 2: Read flags from checkboxes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // A checkbox element has the property .checked (true/false).
   // We check each one and build a flags string like "gi" or "gim".
   //
   // Why flags matter:
-  //   g = global    — find ALL matches (not just the first)
-  //   i = insensitive — "Hello" matches "hello", "HELLO", etc.
-  //   m = multiline  — ^ and $ match start/end of each LINE, not just the string
+  //   g = global    â€” find ALL matches (not just the first)
+  //   i = insensitive â€” "Hello" matches "hello", "HELLO", etc.
+  //   m = multiline  â€” ^ and $ match start/end of each LINE, not just the string
   var flagG = document.getElementById('flagG').checked; // Global flag checkbox
   var flagI = document.getElementById('flagI').checked; // Case-insensitive flag checkbox
   var flagM = document.getElementById('flagM').checked; // Multiline flag checkbox
@@ -780,11 +800,11 @@ async function generateRegex() {
 
   var flagsDisplay = flagsString ? '/' + flagsString : 'none selected';
 
-  // ── STEP 3: Validate ─────────────────────────────────────────────────────
+  // â”€â”€ STEP 3: Validate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (!description) {
     var ta = document.getElementById('descriptionInput');
     ta.style.borderColor = 'rgba(99,102,241,0.7)';
-    ta.placeholder = 'Please describe what the regex should match ✦';
+    ta.placeholder = 'Please describe what the regex should match âœ¦';
     setTimeout(function() {
       ta.style.borderColor = '';
       ta.placeholder = 'e.g., "Match a valid email address"\n"Find all dates in DD/MM/YYYY format"\n"Extract URLs starting with https"';
@@ -792,40 +812,40 @@ async function generateRegex() {
     return;
   }
 
-  // ── STEP 4: Build the AI System Prompt ──────────────────────────────────
+  // â”€â”€ STEP 4: Build the AI System Prompt â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // CRITICAL FORMAT INSTRUCTION:
   //   We ask the AI to separate its output into two parts using "---" as a
-  //   divider. This makes parsing completely reliable — no guessing needed.
+  //   divider. This makes parsing completely reliable â€” no guessing needed.
   //
   //   OUTPUT EXPECTED FROM AI:
   //     ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$
   //     ---
-  //     ^ — Start of string anchor
-  //     [a-zA-Z0-9._%+-]+ — One or more valid email username characters
-  //     @ — Literal @ symbol
-  //     [a-zA-Z0-9.-]+ — One or more domain name characters
-  //     \. — Escaped dot (literal period)
-  //     [a-zA-Z]{2,} — Two or more letter TLD (e.g., com, org, net)
-  //     $ — End of string anchor
+  //     ^ â€” Start of string anchor
+  //     [a-zA-Z0-9._%+-]+ â€” One or more valid email username characters
+  //     @ â€” Literal @ symbol
+  //     [a-zA-Z0-9.-]+ â€” One or more domain name characters
+  //     \. â€” Escaped dot (literal period)
+  //     [a-zA-Z]{2,} â€” Two or more letter TLD (e.g., com, org, net)
+  //     $ â€” End of string anchor
   var systemPrompt =
     'You are an expert computer science engineer and regex architect with deep knowledge of POSIX, PCRE, and JavaScript regex standards.\n\n' +
     'Convert this plain English request into a precise, production-ready Regular Expression:\n' +
     '"' + description + '"\n\n' +
     'Selected Regex Flags: ' + (flagsString || 'none') + '\n\n' +
-    'STRICT OUTPUT FORMAT (follow EXACTLY — no deviations):\n' +
+    'STRICT OUTPUT FORMAT (follow EXACTLY â€” no deviations):\n' +
     'Line 1: Output ONLY the raw regex pattern string. No slashes. No flags. No quotes. No explanation. Just the bare pattern.\n' +
     'Line 2: Output exactly three dashes: ---\n' +
     'Lines 3+: For EACH token/component in the pattern, write one line in this format:\n' +
-    '  TOKEN — Plain English explanation of what this token does and why it is used\n\n' +
+    '  TOKEN â€” Plain English explanation of what this token does and why it is used\n\n' +
     'RULES:\n' +
     '1. The pattern must be syntactically correct JavaScript regex\n' +
     '2. Explain EVERY meaningful token: anchors (^ $), quantifiers (* + ? {}), character classes ([] \\d \\w \\s), groups (()), alternation (|), escapes (\\.), flags, etc.\n' +
-    '3. Use beginner-friendly language — explain as if the reader has never seen regex before\n' +
+    '3. Use beginner-friendly language â€” explain as if the reader has never seen regex before\n' +
     '4. Do NOT include any introduction, greeting, or footer text\n' +
     '5. Do NOT wrap the pattern in / / slashes\n' +
     '6. The separator line must be exactly: ---';
 
-  // ── STEP 5: Show loading state ────────────────────────────────────────────
+  // â”€â”€ STEP 5: Show loading state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var btn      = document.getElementById('generateBtn');
   var btnText  = document.getElementById('btnText');
   var btnIcon  = document.getElementById('btnIcon');
@@ -864,7 +884,7 @@ async function generateRegex() {
       '</div>' +
     '</div>';
 
-  // ── STEP 6 + 7: POST to backend and wait ────────────────────────────────
+  // â”€â”€ STEP 6 + 7: POST to backend and wait â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   try {
 
     var response = await fetch('/api/generate', {
@@ -878,7 +898,7 @@ async function generateRegex() {
 
     var data = await response.json();
 
-    // ── STEP 8 + 9: Parse and render ──────────────────────────────────────
+    // â”€â”€ STEP 8 + 9: Parse and render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (data.result) {
       parseAndRender(data.result.trim(), flagsString, description);
       copyBtn.classList.remove('hidden');
@@ -890,14 +910,14 @@ async function generateRegex() {
     showRegexError('Network error. Could not reach the server. Please check your internet connection and try again.');
   }
 
-  // ── STEP 10: Reset button ────────────────────────────────────────────────
+  // â”€â”€ STEP 10: Reset button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   btn.disabled        = false;
   btnText.textContent = 'Generate Regex';
-  btnIcon.textContent = '\uD83E\uDDE9'; // 🧩
+  btnIcon.textContent = '\uD83E\uDDE9'; // ðŸ§©
 }
 
 
-// ─── FUNCTION 2: parseAndRender ──────────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 2: parseAndRender â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Takes the raw AI response and renders it as two visual sections.
 //
 // HOW THE PARSING WORKS:
@@ -907,25 +927,25 @@ async function generateRegex() {
 //   Example raw response:
 //     "^[a-zA-Z0-9.]+@[a-zA-Z]+\.[a-zA-Z]{2,}$
 //     ---
-//     ^ — Anchors the match to the start of the string
-//     [a-zA-Z0-9.]+ — Matches one or more letters, digits, or dots (username)
-//     @ — Matches a literal @ symbol
+//     ^ â€” Anchors the match to the start of the string
+//     [a-zA-Z0-9.]+ â€” Matches one or more letters, digits, or dots (username)
+//     @ â€” Matches a literal @ symbol
 //     ..."
 //
 //   After split:
-//     parts[0] = "^[a-zA-Z0-9.]+@[a-zA-Z]+\.[a-zA-Z]{2,}$"  ← the pattern
-//     parts[1] = "^ — Anchors...\n[a-zA-Z0-9.]+ — Matches..."  ← explanation
+//     parts[0] = "^[a-zA-Z0-9.]+@[a-zA-Z]+\.[a-zA-Z]{2,}$"  â† the pattern
+//     parts[1] = "^ â€” Anchors...\n[a-zA-Z0-9.]+ â€” Matches..."  â† explanation
 //
 // Parameters:
-//   rawText     — full AI response string
-//   flagsString — the selected flags (e.g., "gi", "m", or "")
-//   description — original user description (shown in metadata)
+//   rawText     â€” full AI response string
+//   flagsString â€” the selected flags (e.g., "gi", "m", or "")
+//   description â€” original user description (shown in metadata)
 function parseAndRender(rawText, flagsString, description) {
 
   // Store for copy function
   window._currentRegexData = { rawText: rawText, flags: flagsString };
 
-  // ── Split the response at "---" ──────────────────────────────────────────
+  // â”€â”€ Split the response at "---" â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // The separator can appear as "---" with or without surrounding whitespace/newlines.
   // We use a regex to catch all variations: /\n?-{3}\n?/
   var parts    = rawText.split(/\r?\n-{3}\r?\n/);
@@ -949,7 +969,7 @@ function parseAndRender(rawText, flagsString, description) {
   // Build the formatted regex string with slashes and flags (for display)
   var displayRegex = '/' + pattern + '/' + flagsString;
 
-  // ── Render Part A: The Pattern Box ───────────────────────────────────────
+  // â”€â”€ Render Part A: The Pattern Box â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var patternHTML =
     '<div class="regex-pattern-box">' +
       // Header row
@@ -977,21 +997,21 @@ function parseAndRender(rawText, flagsString, description) {
 
       // Metadata below the pattern
       '<p class="text-xs text-white/22 mt-2.5 font-mono">' +
-        'For: <span class="text-indigo-300/50">' + escapeHTML(description.slice(0, 60) + (description.length > 60 ? '…' : '')) + '</span>' +
+        'For: <span class="text-indigo-300/50">' + escapeHTML(description.slice(0, 60) + (description.length > 60 ? 'â€¦' : '')) + '</span>' +
       '</p>' +
     '</div>';
 
-  // ── Render Part B: The Token Explanation Card ─────────────────────────────
-  // Each line of the explanation is formatted as: TOKEN — Description
+  // â”€â”€ Render Part B: The Token Explanation Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Each line of the explanation is formatted as: TOKEN â€” Description
   // We render each line as a styled table row.
   var explanationLines = explText.split('\n').filter(function(l) { return l.trim(); });
 
   var explanationRows = explanationLines.map(function(line) {
     var trimmed = line.trim();
 
-    // Check if the line has the TOKEN — Description format
-    // We split on " — " or " - " (em dash or regular dash with spaces)
-    var sepIdx = trimmed.indexOf(' — ');
+    // Check if the line has the TOKEN â€” Description format
+    // We split on " â€” " or " - " (em dash or regular dash with spaces)
+    var sepIdx = trimmed.indexOf(' â€” ');
     if (sepIdx === -1) sepIdx = trimmed.indexOf(' - ');
 
     if (sepIdx !== -1) {
@@ -1025,33 +1045,33 @@ function parseAndRender(rawText, flagsString, description) {
       '</div>' +
     '</div>';
 
-  // ── Inject everything into the DOM ────────────────────────────────────────
+  // â”€â”€ Inject everything into the DOM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   document.getElementById('resultArea').innerHTML = patternHTML + explanationHTML;
 }
 
 
-// ─── HELPER: renderFlagBadge ─────────────────────────────────────────────────
+// â”€â”€â”€ HELPER: renderFlagBadge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Renders a small badge for each regex flag (g, i, m).
 // The badge is bright/solid if the flag is active, dimmed if not.
 //
 // Parameters:
-//   flag        — single flag letter ('g', 'i', or 'm')
-//   flagsString — the combined flags string (e.g., "gi")
+//   flag        â€” single flag letter ('g', 'i', or 'm')
+//   flagsString â€” the combined flags string (e.g., "gi")
 function renderFlagBadge(flag, flagsString) {
   var isActive = flagsString.indexOf(flag) !== -1;
   var labels   = { g: 'global', i: 'insensitive', m: 'multiline' };
 
   if (isActive) {
-    return '<span title="Flag /' + flag + ' — ' + labels[flag] + '" ' +
+    return '<span title="Flag /' + flag + ' â€” ' + labels[flag] + '" ' +
            'class="flag-badge active">' + flag + '</span>';
   } else {
-    return '<span title="Flag /' + flag + ' — not selected" ' +
+    return '<span title="Flag /' + flag + ' â€” not selected" ' +
            'class="flag-badge inactive">' + flag + '</span>';
   }
 }
 
 
-// ─── FUNCTION 3: copyPattern ─────────────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 3: copyPattern â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Copies the clean regex pattern (with slashes and flags) to the clipboard.
 async function copyPattern() {
   var d = window._currentRegexData;
@@ -1085,7 +1105,7 @@ async function copyPattern() {
 }
 
 
-// ─── FUNCTION 4: showRegexError ──────────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 4: showRegexError â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Displays an error message inside the result panel.
 function showRegexError(message) {
   document.getElementById('resultArea').innerHTML =
@@ -1099,7 +1119,7 @@ function showRegexError(message) {
 }
 
 
-// ─── FUNCTION 5: fillDescription ─────────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 5: fillDescription â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Fills the textarea with an example chip text.
 function fillDescription(text) {
   document.getElementById('descriptionInput').value = text;
@@ -1107,7 +1127,7 @@ function fillDescription(text) {
 }
 
 
-// ─── HELPER: escapeHTML ───────────────────────────────────────────────────────
+// â”€â”€â”€ HELPER: escapeHTML â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Converts HTML special characters to safe entities. Prevents XSS.
 function escapeHTML(str) {
   var div = document.createElement('div');
@@ -1116,7 +1136,7 @@ function escapeHTML(str) {
 }
 
 
-// ─── KEYBOARD SHORTCUT ────────────────────────────────────────────────────────
+// â”€â”€â”€ KEYBOARD SHORTCUT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Ctrl+Enter / Cmd+Enter in the textarea triggers generation.
 document.getElementById('descriptionInput').addEventListener('keydown', function(e) {
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {

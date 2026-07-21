@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--
   FILE     : /education/study-plan-generator.html
   WEBSITE  : easyaitoolz.com
-  PURPOSE  : AI Study Plan Generator & Roadmap Builder — Education Suite
+  PURPOSE  : AI Study Plan Generator & Roadmap Builder â€” Education Suite
   TECH     : HTML5 + Tailwind CSS CDN + Vanilla JavaScript
 
   HOW THIS TOOL WORKS:
@@ -11,16 +11,16 @@
   2. JavaScript builds a system prompt that asks the AI for:
        WEEK 1: [Title]
        - [Topic + action item]
-       ★ MILESTONE: [Achievement goal]
+       â˜… MILESTONE: [Achievement goal]
        WEEK 2: ...
-  3. POST to /api/generate (Cloudflare → Gemini, API key hidden server-side)
+  3. POST to /api/generate (Cloudflare â†’ Gemini, API key hidden server-side)
   4. renderRoadmap() splits response into blocks (per WEEK/DAY header)
   5. Each block becomes a styled timeline card with:
        - Numbered circle badge (left timeline connector)
        - Block title
        - Checked task items (topics + action items)
-       - ★ MILESTONE badges (amber)
-       - 📖 REVIEW badges (purple)
+       - â˜… MILESTONE badges (amber)
+       - ðŸ“– REVIEW badges (purple)
   6. Cards are connected by a vertical timeline line for the roadmap feel
 -->
 <html lang="en">
@@ -28,6 +28,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%234F46E5'/><stop offset='100%' style='stop-color:%23EC4899'/></linearGradient></defs><rect width='100' height='100' rx='20' fill='url(%23g)'/><text y='.9em' font-size='70' x='15'>⚡</text></svg>" />
   <title>AI Study Plan Generator &amp; Roadmap Builder &mdash; EasyAIToolz</title>
   <meta name="description" content="Generate a detailed, personalized study roadmap with AI. Day-by-day or week-by-week plans with milestones and review days. Free, no signup." />
 
@@ -52,7 +53,7 @@
   </script>
 
   <style>
-    /* ── BASE ──────────────────────────────────────────────────────────────*/
+    /* â”€â”€ BASE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     body {
       background-color: #06080f;
       font-family: 'Inter', sans-serif;
@@ -60,8 +61,8 @@
       overflow-x: hidden;
     }
 
-    /* ── MESH GRADIENT BACKGROUND ──────────────────────────────────────────
-       Rich indigo-blue-teal aurora — premium educational planner aesthetic.
+    /* â”€â”€ MESH GRADIENT BACKGROUND â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       Rich indigo-blue-teal aurora â€” premium educational planner aesthetic.
        More complex gradient than other pages to match the "roadmap" theme. */
     .mesh-bg {
       background-color: #06080f;
@@ -72,7 +73,7 @@
         radial-gradient(ellipse 35% 30% at 20% 70%, rgba(20,184,166,.04) 0%, transparent 45%);
     }
 
-    /* ── FROSTED GLASS NAVBAR ─────────────────────────────────────────────*/
+    /* â”€â”€ FROSTED GLASS NAVBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     .navbar-glass {
       background: rgba(6, 8, 15, 0.82);
       backdrop-filter: blur(16px);
@@ -80,8 +81,8 @@
       border-bottom: 1px solid rgba(255,255,255,.06);
     }
 
-    /* ── GRADIENT HEADING ──────────────────────────────────────────────────
-       Indigo → blue → teal — progressive, like a learning journey. */
+    /* â”€â”€ GRADIENT HEADING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       Indigo â†’ blue â†’ teal â€” progressive, like a learning journey. */
     .gradient-text {
       background: linear-gradient(135deg, #818cf8 0%, #38bdf8 50%, #2dd4bf 100%);
       -webkit-background-clip: text;
@@ -89,14 +90,14 @@
       background-clip: text;
     }
 
-    /* ── INPUT FOCUS ───────────────────────────────────────────────────────*/
+    /* â”€â”€ INPUT FOCUS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     .input-field:focus {
       outline: none;
       box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.38);
       border-color: rgba(99, 102, 241, 0.50);
     }
 
-    /* ── CUSTOM DROPDOWN ARROW ─────────────────────────────────────────────*/
+    /* â”€â”€ CUSTOM DROPDOWN ARROW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     .custom-select {
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
       background-repeat: no-repeat;
@@ -104,7 +105,7 @@
       padding-right: 40px;
     }
 
-    /* ── GENERATE BUTTON ───────────────────────────────────────────────────*/
+    /* â”€â”€ GENERATE BUTTON â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     .btn-generate {
       background: linear-gradient(135deg, #4f46e5 0%, #2563eb 50%, #0e7490 100%);
       background-size: 200% 200%;
@@ -114,7 +115,7 @@
     .btn-generate:hover:not(:disabled) { background-position: right center; transform: translateY(-1px); }
     .btn-generate:disabled             { opacity: 0.45; cursor: not-allowed; }
 
-    /* ── SPINNER ───────────────────────────────────────────────────────────*/
+    /* â”€â”€ SPINNER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner {
       width: 17px; height: 17px;
@@ -126,12 +127,12 @@
       vertical-align: middle;
     }
 
-    /* ══════════════════════════════════════════════════════════════════════
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        ROADMAP / TIMELINE STYLES
        These are the core visual elements of the study plan output.
-       ══════════════════════════════════════════════════════════════════════ */
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-    /* ── PLAN METADATA BAR ─────────────────────────────────────────────────
+    /* â”€â”€ PLAN METADATA BAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Shows timeline, daily hours, and style as colored tags above the roadmap. */
     .plan-meta-bar {
       background: rgba(255,255,255,0.02);
@@ -153,16 +154,16 @@
       gap: 0.375rem;
     }
 
-    /* ── ROADMAP TIMELINE CONTAINER ────────────────────────────────────────
+    /* â”€â”€ ROADMAP TIMELINE CONTAINER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        The vertical timeline layout.
        Each phase-card is positioned with a timeline connector on the left. */
     .roadmap-timeline {
       display: flex;
       flex-direction: column;
-      gap: 0;           /* No gap — cards connect via the timeline line */
+      gap: 0;           /* No gap â€” cards connect via the timeline line */
     }
 
-    /* ── PHASE CARD ─────────────────────────────────────────────────────────
+    /* â”€â”€ PHASE CARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Each Week/Day block is a card in the timeline.
 
        LAYOUT (flex row):
@@ -177,10 +178,10 @@
       display: flex;
       gap: 1.25rem;
       padding: 1.25rem 0;
-      border-left: none;    /* No left border — the timeline line does this job */
+      border-left: none;    /* No left border â€” the timeline line does this job */
     }
 
-    /* ── TIMELINE CONNECTOR (Left column of each card) ─────────────────────
+    /* â”€â”€ TIMELINE CONNECTOR (Left column of each card) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Contains the circle badge and the connecting vertical line.
        position:relative allows the line to be absolutely positioned. */
     .timeline-connector {
@@ -192,7 +193,7 @@
       position: relative;
     }
 
-    /* ── TIMELINE DOT ─────────────────────────────────────────────────────
+    /* â”€â”€ TIMELINE DOT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        The numbered circle badge showing the week/day number.
        Color is set dynamically by JavaScript (indigo/blue/amber/purple). */
     .timeline-dot {
@@ -206,10 +207,10 @@
       flex-shrink: 0;
       position: relative;
       z-index: 1;
-      background: #06080f;  /* Same as page bg — sits on top of the line */
+      background: #06080f;  /* Same as page bg â€” sits on top of the line */
     }
 
-    /* ── TIMELINE LINE ─────────────────────────────────────────────────────
+    /* â”€â”€ TIMELINE LINE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        The thin vertical line connecting one card to the next.
        It extends from just below the dot all the way down.
        It's shown on all cards EXCEPT the first one (idx > 0 check in JS). */
@@ -224,7 +225,7 @@
       z-index: 0;
     }
 
-    /* ── PHASE CARD BODY (Right column) ───────────────────────────────────
+    /* â”€â”€ PHASE CARD BODY (Right column) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        The actual content of each week/day block.
        Has a subtle border and background for the "card" look. */
     .phase-card-body {
@@ -241,7 +242,7 @@
       border-color: rgba(99,102,241,0.18);
     }
 
-    /* ── TASK ITEM ───────────────────────────────────────────────────────────
+    /* â”€â”€ TASK ITEM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        A regular topic/action item inside a phase card.
        Flex row: [icon] [text] */
     .task-item {
@@ -278,7 +279,7 @@
       line-height: 1.6;
     }
 
-    /* ── SUB-TASK ITEM ────────────────────────────────────────────────────*/
+    /* â”€â”€ SUB-TASK ITEM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     .sub-task-item {
       display: flex;
       align-items: flex-start;
@@ -286,8 +287,8 @@
       padding: 0.2rem 0 0.2rem 1.5rem;
     }
 
-    /* ── MILESTONE ITEM ─────────────────────────────────────────────────────
-       ★ MILESTONE: ...
+    /* â”€â”€ MILESTONE ITEM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       â˜… MILESTONE: ...
        Shown with an amber/gold colored banner at the bottom of relevant cards. */
     .milestone-item {
       display: flex;
@@ -306,8 +307,8 @@
       margin-top: 0.1rem;
     }
 
-    /* ── REVIEW ITEM ─────────────────────────────────────────────────────────
-       📖 REVIEW: ...
+    /* â”€â”€ REVIEW ITEM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       ðŸ“– REVIEW: ...
        Purple-tinted banner for review/revision days. */
     .review-item {
       display: flex;
@@ -320,7 +321,7 @@
       margin-top: 0.75rem;
     }
 
-    /* ── SPECIAL BADGE ────────────────────────────────────────────────────
+    /* â”€â”€ SPECIAL BADGE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Small badge shown in the top-right of milestone/review cards. */
     .special-badge {
       font-size: 0.60rem;
@@ -333,7 +334,7 @@
       flex-shrink: 0;
     }
 
-    /* ── EXAMPLE CHIP ──────────────────────────────────────────────────────*/
+    /* â”€â”€ EXAMPLE CHIP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     .example-chip { transition: all 0.2s ease; }
     .example-chip:hover {
       background: rgba(99,102,241,0.12);
@@ -341,13 +342,32 @@
       color: #a5b4fc;
     }
 
-    /* ── SCROLLBAR ─────────────────────────────────────────────────────── */
+    /* â”€â”€ SCROLLBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     ::-webkit-scrollbar       { width: 6px; }
     ::-webkit-scrollbar-track { background: #0d1117; }
     ::-webkit-scrollbar-thumb { background: #1e1b4b; border-radius: 4px; }
 
     html { scroll-behavior: smooth; }
   </style>
+
+  <!-- â”€â”€â”€ SEO: Open Graph â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:site_name"   content="EasyAIToolz" />
+  <meta property="og:title"       content="AI Study Plan Generator - Personalized Learning Plans | EasyAIToolz" />
+  <meta property="og:description" content="Create a personalized study plan for any subject, exam or skill. AI builds your schedule based on your goals and deadline." />
+  <meta property="og:url"         content="https://easyaitoolz.ranahammad9995.workers.dev/education/study-plan-generator.html" />
+  <meta property="og:image"       content="https://easyaitoolz.ranahammad9995.workers.dev/og-image.png" />
+  <meta property="og:image:width"  content="1200" />
+  <meta property="og:image:height" content="630" />
+  <!-- â”€â”€â”€ SEO: Twitter Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:title"       content="AI Study Plan Generator - Personalized Learning Plans | EasyAIToolz" />
+  <meta name="twitter:description" content="Create a personalized study plan for any subject, exam or skill. AI builds your schedule based on your goals and deadline." />
+  <meta name="twitter:image"       content="https://easyaitoolz.ranahammad9995.workers.dev/og-image.png" />
+  <!-- â”€â”€â”€ SEO: Canonical + Keywords â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <link rel="canonical" href="https://easyaitoolz.ranahammad9995.workers.dev/education/study-plan-generator.html" />
+  <meta name="keywords" content="study plan generator, ai study planner, learning schedule, exam preparation, free study tool" />
+  <meta name="robots"   content="index, follow" />
 </head>
 
 
@@ -436,11 +456,11 @@
 
 
 <!-- ==============================================================================
-     MAIN WORKSPACE — Two-column layout
+     MAIN WORKSPACE â€” Two-column layout
 
      LAYOUT:
-       Mobile  (< 1024px)  → 1 column, stacked
-       Desktop (>= 1024px) → [380px fixed left] | [flexible right]
+       Mobile  (< 1024px)  â†’ 1 column, stacked
+       Desktop (>= 1024px) â†’ [380px fixed left] | [flexible right]
 
      The right side needs to be wide because the timeline cards
      are horizontal and need breathing room for their content.
@@ -462,13 +482,13 @@
         </h2>
 
 
-        <!-- ── INPUT 1: SUBJECT / GOAL ────────────────────────────────────
+        <!-- â”€â”€ INPUT 1: SUBJECT / GOAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              What does the user want to learn or achieve?
              The more specific, the better the AI's plan.
 
-             VAGUE   → "Python"
-             BETTER  → "Learn Python for Data Science"
-             BEST    → "Master Python for Data Science — complete beginner to portfolio-ready"
+             VAGUE   â†’ "Python"
+             BETTER  â†’ "Learn Python for Data Science"
+             BEST    â†’ "Master Python for Data Science â€” complete beginner to portfolio-ready"
         -->
         <div class="mb-5">
           <label for="subjectInput" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
@@ -498,17 +518,17 @@
         </div>
 
 
-        <!-- ── INPUT 2: TIMELINE ──────────────────────────────────────────
+        <!-- â”€â”€ INPUT 2: TIMELINE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              Kitne time mein plan complete karna hai?
-             1 Week → Daily breakdown (DAY 1, DAY 2 ... DAY 7)
-             2+ Weeks → Weekly breakdown (WEEK 1, WEEK 2 ...)
+             1 Week â†’ Daily breakdown (DAY 1, DAY 2 ... DAY 7)
+             2+ Weeks â†’ Weekly breakdown (WEEK 1, WEEK 2 ...)
         -->
         <div class="mb-5">
           <label for="timelineSelect" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
             2. Overall Timeline
           </label>
           <select id="timelineSelect" class="input-field custom-select w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm transition-colors appearance-none cursor-pointer">
-            <option value="1 Week (7 Days)">&#128197; 1 Week (7 Days) — Daily breakdown</option>
+            <option value="1 Week (7 Days)">&#128197; 1 Week (7 Days) â€” Daily breakdown</option>
             <option value="2 Weeks (14 Days)">&#128197; 2 Weeks (14 Days)</option>
             <option value="4 Weeks (1 Month)" selected>&#128197; 4 Weeks (1 Month)</option>
             <option value="8 Weeks (2 Months)">&#128197; 8 Weeks (2 Months)</option>
@@ -516,7 +536,7 @@
         </div>
 
 
-        <!-- ── INPUT 3: DAILY COMMITMENT ─────────────────────────────────
+        <!-- â”€â”€ INPUT 3: DAILY COMMITMENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              Roz kitne ghante padhna possible hai?
              AI is se workload calibrate karta hai.
         -->
@@ -525,28 +545,28 @@
             3. Daily Study Time
           </label>
           <select id="commitmentSelect" class="input-field custom-select w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm transition-colors appearance-none cursor-pointer">
-            <option value="1 Hour">&#9200; 1 Hour — Light schedule</option>
-            <option value="2 Hours" selected>&#9200; 2 Hours — Standard</option>
-            <option value="4 Hours">&#9200; 4 Hours — Intensive</option>
-            <option value="6+ Hours">&#9200; 6+ Hours — Full-time study</option>
+            <option value="1 Hour">&#9200; 1 Hour â€” Light schedule</option>
+            <option value="2 Hours" selected>&#9200; 2 Hours â€” Standard</option>
+            <option value="4 Hours">&#9200; 4 Hours â€” Intensive</option>
+            <option value="6+ Hours">&#9200; 6+ Hours â€” Full-time study</option>
           </select>
         </div>
 
 
-        <!-- ── INPUT 4: LEARNING STYLE ────────────────────────────────────
+        <!-- â”€â”€ INPUT 4: LEARNING STYLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              How should the AI frame the tasks?
 
              Practical/Project-Based:
-               → "Build a CLI calculator", "Create a REST API"
-               → For people who learn by doing
+               â†’ "Build a CLI calculator", "Create a REST API"
+               â†’ For people who learn by doing
 
              Concept/Theory-Heavy:
-               → "Read chapter 5", "Write notes on Newton's Laws"
-               → For people who need mental models first
+               â†’ "Read chapter 5", "Write notes on Newton's Laws"
+               â†’ For people who need mental models first
 
              Exam-Prep Focus:
-               → "Complete 20 past-paper questions", "Time yourself on mock test"
-               → For people preparing for a specific exam
+               â†’ "Complete 20 past-paper questions", "Time yourself on mock test"
+               â†’ For people preparing for a specific exam
         -->
         <div class="mb-7">
           <label for="styleSelect" class="block text-xs font-semibold text-white/40 uppercase tracking-widest mb-2">
@@ -560,7 +580,7 @@
         </div>
 
 
-        <!-- ── GENERATE BUTTON ────────────────────────────────────────────-->
+        <!-- â”€â”€ GENERATE BUTTON â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€-->
         <button
           id="generateBtn"
           onclick="generateStudyPlan()"
@@ -578,7 +598,7 @@
         <p class="text-xs font-bold text-indigo-400/75 mb-3 uppercase tracking-widest">Roadmap Markers</p>
         <div class="space-y-2">
           <div class="flex items-center gap-2.5">
-            <span class="text-amber-400 text-sm">★</span>
+            <span class="text-amber-400 text-sm">â˜…</span>
             <div><p class="text-xs font-semibold text-white/50">Milestone</p><p class="text-xs text-white/28">A major achievement checkpoint</p></div>
           </div>
           <div class="flex items-center gap-2.5">
@@ -605,18 +625,18 @@
 
          LAYOUT:
            Panel header bar
-           ├── Title + Copy button
-           └── Scrollable roadmap area
-               ├── emptyState — placeholder before generation
-               └── roadmapContainer — filled by JavaScript
-                   ├── Plan metadata bar (tags)
-                   └── Timeline cards (one per WEEK/DAY)
-                       ├── Timeline connector (dot + line)
-                       └── Phase card body
-                           ├── Period label + title
-                           ├── Task items (✓ / 🔧)
-                           ├── ★ MILESTONE banner (amber)
-                           └── 📖 REVIEW banner (purple)
+           â”œâ”€â”€ Title + Copy button
+           â””â”€â”€ Scrollable roadmap area
+               â”œâ”€â”€ emptyState â€” placeholder before generation
+               â””â”€â”€ roadmapContainer â€” filled by JavaScript
+                   â”œâ”€â”€ Plan metadata bar (tags)
+                   â””â”€â”€ Timeline cards (one per WEEK/DAY)
+                       â”œâ”€â”€ Timeline connector (dot + line)
+                       â””â”€â”€ Phase card body
+                           â”œâ”€â”€ Period label + title
+                           â”œâ”€â”€ Task items (âœ“ / ðŸ”§)
+                           â”œâ”€â”€ â˜… MILESTONE banner (amber)
+                           â””â”€â”€ ðŸ“– REVIEW banner (purple)
          ============================================================ -->
     <div class="flex flex-col gap-4 lg:sticky lg:top-24">
 
@@ -629,7 +649,7 @@
             <h2 class="text-sm font-semibold text-white/70">Your Study Roadmap</h2>
           </div>
 
-          <!-- COPY BUTTON — hidden until plan is generated -->
+          <!-- COPY BUTTON â€” hidden until plan is generated -->
           <button
             id="copyBtn"
             onclick="copyPlan()"
@@ -645,7 +665,7 @@
         <div class="overflow-y-auto p-5" style="min-height: 540px; max-height: 78vh;">
 
 
-          <!-- ── EMPTY STATE ─────────────────────────────────────────────────
+          <!-- â”€â”€ EMPTY STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                Shown before the user generates a plan. -->
           <div id="emptyState" class="flex flex-col items-center justify-center gap-6 py-14 text-center">
 
@@ -657,7 +677,7 @@
                 <div class="w-px h-7 bg-gradient-to-b from-indigo-500/30 to-blue-500/20"></div>
                 <div class="w-10 h-10 rounded-full bg-blue-500/12 border border-blue-500/22 flex items-center justify-center text-blue-400 font-bold">2</div>
                 <div class="w-px h-7 bg-gradient-to-b from-blue-500/20 to-amber-500/25"></div>
-                <div class="w-10 h-10 rounded-full bg-amber-500/12 border border-amber-500/25 flex items-center justify-center text-amber-400 font-bold text-sm">★</div>
+                <div class="w-10 h-10 rounded-full bg-amber-500/12 border border-amber-500/25 flex items-center justify-center text-amber-400 font-bold text-sm">â˜…</div>
               </div>
             </div>
 
@@ -700,15 +720,15 @@
           </div><!-- end emptyState -->
 
 
-          <!-- ── ROADMAP CONTAINER ────────────────────────────────────────────
+          <!-- â”€â”€ ROADMAP CONTAINER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                Hidden initially. JavaScript fills this div with:
                  - plan-meta-bar (tags showing timeline/hours/style)
                  - roadmap-timeline (flex column of phase cards)
                  - Legend bar at the bottom
 
                Each phase card has:
-                 .timeline-connector → numbered circle dot + vertical line
-                 .phase-card-body    → title + task items + milestone/review banners
+                 .timeline-connector â†’ numbered circle dot + vertical line
+                 .phase-card-body    â†’ title + task items + milestone/review banners
           -->
           <div id="roadmapContainer" class="hidden">
             <!-- JavaScript renderRoadmap() fills this -->
@@ -745,7 +765,7 @@
 
 
 <!-- ==============================================================================
-     JAVASCRIPT — study_plan_logic.js embedded at build time.
+     JAVASCRIPT â€” study_plan_logic.js embedded at build time.
      Placed at the bottom so all HTML elements exist when JS runs.
      ============================================================================== -->
 <script>
@@ -756,30 +776,30 @@
 // ============================================================
 
 
-// ─── FUNCTION 1: generateStudyPlan ───────────────────────────────────────────
-// Main function — "Generate Custom Study Plan 📅" button click par chalta hai.
+// â”€â”€â”€ FUNCTION 1: generateStudyPlan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Main function â€” "Generate Custom Study Plan ðŸ“…" button click par chalta hai.
 //
 // DATA FLOW:
 //   Step 1: Inputs padhna (subject, timeline, commitment, style)
-//   Step 2: Validate — subject field required hai
+//   Step 2: Validate â€” subject field required hai
 //   Step 3: AI system prompt banana (timeline ke hisaab se custom format)
 //   Step 4: Loading state dikhana
 //   Step 5: /api/generate ko POST karna
-//   Step 6: Response parse karna → timeline cards banana
+//   Step 6: Response parse karna â†’ timeline cards banana
 //   Step 7: Beautiful roadmap render karna
 async function generateStudyPlan() {
 
-  // ── STEP 1: Read all inputs ──────────────────────────────────────────────
+  // â”€â”€ STEP 1: Read all inputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var subject    = document.getElementById('subjectInput').value.trim();
   var timeline   = document.getElementById('timelineSelect').value;
   var commitment = document.getElementById('commitmentSelect').value;
   var style      = document.getElementById('styleSelect').value;
 
-  // ── STEP 2: Validate ─────────────────────────────────────────────────────
+  // â”€â”€ STEP 2: Validate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (!subject) {
     var input = document.getElementById('subjectInput');
     input.style.borderColor = 'rgba(99,102,241,0.7)';
-    input.placeholder = 'Subject or goal likhna zaruri hai! ✦';
+    input.placeholder = 'Subject or goal likhna zaruri hai! âœ¦';
     setTimeout(function() {
       input.style.borderColor = '';
       input.placeholder = 'e.g., Learn Python in 30 Days, IELTS Preparation, Organic Chemistry...';
@@ -787,13 +807,13 @@ async function generateStudyPlan() {
     return;
   }
 
-  // ── STEP 3: Build AI System Prompt ──────────────────────────────────────
+  // â”€â”€ STEP 3: Build AI System Prompt â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // We ask the AI to use a STRICT format so our parser can detect week/day blocks.
   // FORMAT:
   //   WEEK 1: [Title]
   //   - [Topic / Action item]
   //   - [Topic / Action item]
-  //   ★ MILESTONE: [What to achieve by end of this week]
+  //   â˜… MILESTONE: [What to achieve by end of this week]
   //
   //   WEEK 2: [Title]
   //   ...
@@ -819,13 +839,13 @@ async function generateStudyPlan() {
     '- [Topic 1 to study + specific subtopic]\n' +
     '- [Topic 2 + action item]\n' +
     '- [Topic 3 + resource type]\n' +
-    (useDaily ? '' : '★ MILESTONE: [What learner should be able to do by end of this week]\n') +
+    (useDaily ? '' : 'â˜… MILESTONE: [What learner should be able to do by end of this week]\n') +
     '\n' +
     unitWord + ' 2: [Title]\n' +
     '...\n' +
     '\n' +
-    'Add "📖 REVIEW:" marker before any review/revision ' + (useDaily ? 'day' : 'week') + '.\n' +
-    'Add "★ MILESTONE:" at end of major phases.';
+    'Add "ðŸ“– REVIEW:" marker before any review/revision ' + (useDaily ? 'day' : 'week') + '.\n' +
+    'Add "â˜… MILESTONE:" at end of major phases.';
 
   var systemPrompt =
     'You are an elite academic coach, learning psychologist, and curriculum designer with 20+ years of experience.\n\n' +
@@ -841,14 +861,14 @@ async function generateStudyPlan() {
     'REQUIREMENTS:\n' +
     '1. Each ' + (useDaily ? 'day' : 'week') + ' must have 3-5 specific, actionable study tasks\n' +
     '2. Match the ' + style + ' learning style in how tasks are framed\n' +
-    '3. Build difficulty progressively (foundational → intermediate → advanced)\n' +
+    '3. Build difficulty progressively (foundational â†’ intermediate â†’ advanced)\n' +
     '4. For ' + style + ': ' + getStyleInstructions(style) + '\n' +
     '5. Dedicate last ' + (useDaily ? '1-2 days' : '1 week') + ' to final review and mock tests\n' +
-    '6. Add ★ MILESTONE every ' + (useDaily ? '3-4 days' : '2 weeks') + '\n' +
-    '7. Daily time budget = ' + commitment + ' — suggest realistic workload\n' +
+    '6. Add â˜… MILESTONE every ' + (useDaily ? '3-4 days' : '2 weeks') + '\n' +
+    '7. Daily time budget = ' + commitment + ' â€” suggest realistic workload\n' +
     '8. Output ONLY the structured plan. No intro, no outro, no extra commentary.';
 
-  // ── STEP 4: Set Loading State ────────────────────────────────────────────
+  // â”€â”€ STEP 4: Set Loading State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var btn      = document.getElementById('generateBtn');
   var btnText  = document.getElementById('btnText');
   var btnIcon  = document.getElementById('btnIcon');
@@ -861,7 +881,7 @@ async function generateStudyPlan() {
 
   showLoadingState(subject, timeline, useDaily);
 
-  // ── STEP 5 + 6: Fetch and parse ──────────────────────────────────────────
+  // â”€â”€ STEP 5 + 6: Fetch and parse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   try {
 
     var response = await fetch('/api/generate', {
@@ -890,11 +910,11 @@ async function generateStudyPlan() {
   // Reset button
   btn.disabled        = false;
   btnText.textContent = 'Generate Custom Study Plan';
-  btnIcon.textContent = '\uD83D\uDCC5'; // 📅
+  btnIcon.textContent = '\uD83D\uDCC5'; // ðŸ“…
 }
 
 
-// ─── HELPER: getStyleInstructions ────────────────────────────────────────────
+// â”€â”€â”€ HELPER: getStyleInstructions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Learning style ke hisaab se AI ko extra instructions deta hai.
 function getStyleInstructions(style) {
   var map = {
@@ -906,7 +926,7 @@ function getStyleInstructions(style) {
 }
 
 
-// ─── FUNCTION 2: renderRoadmap ────────────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 2: renderRoadmap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // AI response ko ek beautiful timeline roadmap mein convert karta hai.
 //
 // PARSING STRATEGY:
@@ -916,20 +936,20 @@ function getStyleInstructions(style) {
 //   4. Each card ko timeline layout mein render karo
 //
 // Parameters:
-//   rawText    — full AI response
-//   subject    — user ka subject (header mein dikhane ke liye)
-//   timeline   — selected timeline
-//   commitment — daily hours
-//   style      — learning style
-//   useDaily   — true = DAY blocks, false = WEEK blocks
+//   rawText    â€” full AI response
+//   subject    â€” user ka subject (header mein dikhane ke liye)
+//   timeline   â€” selected timeline
+//   commitment â€” daily hours
+//   style      â€” learning style
+//   useDaily   â€” true = DAY blocks, false = WEEK blocks
 function renderRoadmap(rawText, subject, timeline, commitment, style, useDaily) {
 
   var container = document.getElementById('roadmapContainer');
   var unitWord  = useDaily ? 'DAY' : 'WEEK';
 
-  // ── Parse: Response ko blocks mein todna ─────────────────────────────────
+  // â”€â”€ Parse: Response ko blocks mein todna â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // REGEX: Line jo "DAY 1:" ya "WEEK 2:" se shuru ho
-  // Split karne ke baad pehla element empty ho sakta hai — filter se hata do
+  // Split karne ke baad pehla element empty ho sakta hai â€” filter se hata do
   var blockRegex = new RegExp('(?=^' + unitWord + '\\s+\\d+[:.])', 'gim');
   var rawBlocks  = rawText.split(blockRegex).filter(function(b) { return b.trim(); });
 
@@ -938,7 +958,7 @@ function renderRoadmap(rawText, subject, timeline, commitment, style, useDaily) 
     rawBlocks = smartSplit(rawText, unitWord);
   }
 
-  // ── Build plan metadata header ────────────────────────────────────────────
+  // â”€â”€ Build plan metadata header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var styleIcon = { 'Practical / Project-Based': '&#128187;', 'Concept / Theory-Heavy': '&#128218;', 'Exam-Prep / Result-Focused': '&#127941;' };
 
   var metaHTML =
@@ -951,16 +971,16 @@ function renderRoadmap(rawText, subject, timeline, commitment, style, useDaily) 
       '<p class="text-sm font-bold text-white/80 mt-3 leading-tight">' + escapeHTML(subject) + '</p>' +
     '</div>';
 
-  // ── Build timeline cards ──────────────────────────────────────────────────
+  // â”€â”€ Build timeline cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var timelineHTML = rawBlocks.map(function(block, idx) {
     return renderPhaseCard(block.trim(), idx, useDaily);
   }).join('');
 
-  // ── Final legend ──────────────────────────────────────────────────────────
+  // â”€â”€ Final legend â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var legendHTML =
     '<div class="flex flex-wrap items-center gap-3 mt-6 pt-4 border-t border-white/5">' +
       '<p class="text-xs text-white/25 mr-2">Legend:</p>' +
-      '<span class="flex items-center gap-1.5 text-xs text-amber-400/70"><span>★</span><span>Milestone</span></span>' +
+      '<span class="flex items-center gap-1.5 text-xs text-amber-400/70"><span>â˜…</span><span>Milestone</span></span>' +
       '<span class="flex items-center gap-1.5 text-xs text-purple-400/70"><span>&#128218;</span><span>Review Day</span></span>' +
       '<span class="flex items-center gap-1.5 text-xs text-green-400/70"><span>&#10003;</span><span>Action Item</span></span>' +
     '</div>';
@@ -975,34 +995,34 @@ function renderRoadmap(rawText, subject, timeline, commitment, style, useDaily) 
 }
 
 
-// ─── FUNCTION 3: renderPhaseCard ─────────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 3: renderPhaseCard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Ek single Week/Day block ko ek beautiful timeline card mein convert karta hai.
 //
 // CARD STRUCTURE:
-//   [Number badge] — [Title] — [Special badge (MILESTONE / REVIEW)]
-//   ├── Bullet items (topics + action items)
-//   └── Milestone / Review marker at bottom
+//   [Number badge] â€” [Title] â€” [Special badge (MILESTONE / REVIEW)]
+//   â”œâ”€â”€ Bullet items (topics + action items)
+//   â””â”€â”€ Milestone / Review marker at bottom
 //
 // Parameters:
-//   blockText — raw text for this week/day block
-//   idx       — 0-indexed block number (for alternating colors + connector line)
-//   useDaily  — true = DAY, false = WEEK
+//   blockText â€” raw text for this week/day block
+//   idx       â€” 0-indexed block number (for alternating colors + connector line)
+//   useDaily  â€” true = DAY, false = WEEK
 function renderPhaseCard(blockText, idx, useDaily) {
 
   var lines     = blockText.split('\n').filter(function(l) { return l.trim(); });
   var titleLine = lines[0] || '';
   var bodyLines = lines.slice(1);
 
-  // ── Extract block number and title ────────────────────────────────────────
+  // â”€â”€ Extract block number and title â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var unitWord    = useDaily ? 'DAY' : 'WEEK';
   var numMatch    = titleLine.match(new RegExp(unitWord + '\\s+(\\d+)[:.\\s]*(.*)', 'i'));
   var blockNum    = numMatch ? numMatch[1] : String(idx + 1);
   var blockTitle  = numMatch ? numMatch[2].trim() : titleLine.replace(/^(DAY|WEEK)\s*\d+[:.]\s*/i, '').trim();
 
-  // ── Detect special card types ─────────────────────────────────────────────
+  // â”€â”€ Detect special card types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var isMilestoneCard = /milestone/i.test(blockText);
   var isReviewCard    = /review|revision|recap|mock test/i.test(titleLine) ||
-                        /📖\s*REVIEW/i.test(blockText);
+                        /ðŸ“–\s*REVIEW/i.test(blockText);
 
   // Choose card accent color based on type
   var accentClass, numBadgeClass, cardBorderClass;
@@ -1023,17 +1043,17 @@ function renderPhaseCard(blockText, idx, useDaily) {
     cardBorderClass = idx % 2 === 0 ? 'border-indigo-500/15' : 'border-blue-500/15';
   }
 
-  // ── Render body lines ──────────────────────────────────────────────────────
+  // â”€â”€ Render body lines â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Detect and style different line types inside the block
   var bodyHTML = bodyLines.map(function(line) {
     var t = line.trim();
     if (!t) return '<div class="h-1"></div>';
 
-    // Milestone line: ★ MILESTONE:
-    if (/^★\s*MILESTONE:/i.test(t)) {
-      var milestoneText = t.replace(/^★\s*MILESTONE:\s*/i, '');
+    // Milestone line: â˜… MILESTONE:
+    if (/^â˜…\s*MILESTONE:/i.test(t)) {
+      var milestoneText = t.replace(/^â˜…\s*MILESTONE:\s*/i, '');
       return '<div class="milestone-item">' +
-               '<span class="milestone-star" aria-hidden="true">★</span>' +
+               '<span class="milestone-star" aria-hidden="true">â˜…</span>' +
                '<div>' +
                  '<p class="text-xs font-bold text-amber-400/80 uppercase tracking-widest mb-0.5">Milestone</p>' +
                  '<p class="text-sm text-amber-300/70 leading-snug">' + escapeHTML(milestoneText) + '</p>' +
@@ -1041,9 +1061,9 @@ function renderPhaseCard(blockText, idx, useDaily) {
              '</div>';
     }
 
-    // Review line: 📖 REVIEW:
-    if (/^📖\s*REVIEW:/i.test(t) || /^REVIEW:/i.test(t)) {
-      var reviewText = t.replace(/^📖\s*REVIEW:\s*/i, '').replace(/^REVIEW:\s*/i, '');
+    // Review line: ðŸ“– REVIEW:
+    if (/^ðŸ“–\s*REVIEW:/i.test(t) || /^REVIEW:/i.test(t)) {
+      var reviewText = t.replace(/^ðŸ“–\s*REVIEW:\s*/i, '').replace(/^REVIEW:\s*/i, '');
       return '<div class="review-item">' +
                '<span class="text-purple-400" aria-hidden="true">&#128218;</span>' +
                '<div>' +
@@ -1053,9 +1073,9 @@ function renderPhaseCard(blockText, idx, useDaily) {
              '</div>';
     }
 
-    // Bullet item: starts with -, *, •, or numbered
-    if (/^[-*•]\s+/.test(t)) {
-      var bulletText = t.replace(/^[-*•]\s+/, '');
+    // Bullet item: starts with -, *, â€¢, or numbered
+    if (/^[-*â€¢]\s+/.test(t)) {
+      var bulletText = t.replace(/^[-*â€¢]\s+/, '');
       // Check if this bullet mentions a project/exercise (for special icon)
       var isProject  = /project|exercise|build|create|practice|code|write|implement/i.test(bulletText);
       return '<div class="task-item">' +
@@ -1065,8 +1085,8 @@ function renderPhaseCard(blockText, idx, useDaily) {
     }
 
     // Sub-bullet (indented with spaces/tab)
-    if (/^\s{2,}[-*•]\s+/.test(line)) {
-      var subText = line.replace(/^\s+[-*•]\s+/, '');
+    if (/^\s{2,}[-*â€¢]\s+/.test(line)) {
+      var subText = line.replace(/^\s+[-*â€¢]\s+/, '');
       return '<div class="sub-task-item">' +
                '<span class="text-white/20 flex-shrink-0">&#8627;</span>' +
                '<span class="text-xs text-white/45">' + escapeHTML(subText) + '</span>' +
@@ -1087,7 +1107,7 @@ function renderPhaseCard(blockText, idx, useDaily) {
 
   }).join('');
 
-  // ── Assemble the card ─────────────────────────────────────────────────────
+  // â”€â”€ Assemble the card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   return '<div class="phase-card ' + cardBorderClass + '">' +
 
     // Left timeline connector (vertical line + circle dot)
@@ -1111,7 +1131,7 @@ function renderPhaseCard(blockText, idx, useDaily) {
         '</div>' +
         // Special badge (only show if relevant)
         (isMilestoneCard
-          ? '<span class="special-badge bg-amber-500/12 border-amber-500/25 text-amber-400">★ Milestone</span>'
+          ? '<span class="special-badge bg-amber-500/12 border-amber-500/25 text-amber-400">â˜… Milestone</span>'
           : '') +
         (isReviewCard
           ? '<span class="special-badge bg-purple-500/12 border-purple-500/25 text-purple-400">&#128218; Review</span>'
@@ -1126,7 +1146,7 @@ function renderPhaseCard(blockText, idx, useDaily) {
 }
 
 
-// ─── HELPER FUNCTION: smartSplit ─────────────────────────────────────────────
+// â”€â”€â”€ HELPER FUNCTION: smartSplit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Fallback parser agar regex split kaam na kare.
 // Manually lines scan karta hai aur WEEK/DAY headers par new block shuru karta hai.
 function smartSplit(rawText, unitWord) {
@@ -1148,8 +1168,8 @@ function smartSplit(rawText, unitWord) {
 }
 
 
-// ─── FUNCTION 4: showLoadingState ────────────────────────────────────────────
-// Loading animation — subject name ke saath placeholder dikhata hai.
+// â”€â”€â”€ FUNCTION 4: showLoadingState â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Loading animation â€” subject name ke saath placeholder dikhata hai.
 function showLoadingState(subject, timeline, useDaily) {
   document.getElementById('emptyState').classList.add('hidden');
   var container = document.getElementById('roadmapContainer');
@@ -1186,7 +1206,7 @@ function showLoadingState(subject, timeline, useDaily) {
 }
 
 
-// ─── FUNCTION 5: showPlanError ───────────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 5: showPlanError â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function showPlanError(message) {
   var container = document.getElementById('roadmapContainer');
   container.innerHTML =
@@ -1198,7 +1218,7 @@ function showPlanError(message) {
 }
 
 
-// ─── FUNCTION 6: copyPlan ────────────────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 6: copyPlan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Raw study plan text clipboard par copy karta hai.
 async function copyPlan() {
   var text = window._currentPlanText;
@@ -1224,7 +1244,7 @@ async function copyPlan() {
 }
 
 
-// ─── FUNCTION 7: fillSubject ──────────────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 7: fillSubject â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Example chip click par subject input fill karta hai.
 function fillSubject(text) {
   document.getElementById('subjectInput').value = text;
@@ -1232,7 +1252,7 @@ function fillSubject(text) {
 }
 
 
-// ─── HELPER: escapeHTML ───────────────────────────────────────────────────────
+// â”€â”€â”€ HELPER: escapeHTML â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function escapeHTML(str) {
   var div = document.createElement('div');
   div.appendChild(document.createTextNode(String(str)));
@@ -1240,7 +1260,7 @@ function escapeHTML(str) {
 }
 
 
-// ─── KEYBOARD SHORTCUT ────────────────────────────────────────────────────────
+// â”€â”€â”€ KEYBOARD SHORTCUT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 document.getElementById('subjectInput').addEventListener('keydown', function(e) {
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') generateStudyPlan();
 });

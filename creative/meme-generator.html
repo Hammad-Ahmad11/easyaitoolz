@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--
   FILE     : /creative/meme-generator.html
   WEBSITE  : easyaitoolz.com
-  PURPOSE  : AI Meme Generator — Creative Suite
+  PURPOSE  : AI Meme Generator â€” Creative Suite
   TECH     : HTML5 + Tailwind CSS CDN + Vanilla JavaScript
 
   HOW THIS TOOL WORKS:
@@ -11,7 +11,7 @@
   2. User picks target audience and humor type from dropdowns
   3. JavaScript builds a system prompt instructing AI to return:
         "Template: [...] | Top Text: [...] | Bottom Text: [...]"
-  4. POST to /api/generate (our Cloudflare backend — API key hidden server-side)
+  4. POST to /api/generate (our Cloudflare backend â€” API key hidden server-side)
   5. parseMemeResponse() splits the pipe-separated AI response into 3 parts
   6. renderMemeCard() displays Top Text + Bottom Text in Impact-style meme font
      over a dark gradient background that mimics a real meme template
@@ -21,6 +21,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%234F46E5'/><stop offset='100%' style='stop-color:%23EC4899'/></linearGradient></defs><rect width='100' height='100' rx='20' fill='url(%23g)'/><text y='.9em' font-size='70' x='15'>⚡</text></svg>" />
   <title>AI Meme Generator &mdash; EasyAIToolz</title>
   <meta name="description" content="Generate hilarious meme ideas instantly with AI. Get the template, top text, and bottom text. Free, no signup required." />
 
@@ -38,7 +39,7 @@
   </script>
 
   <style>
-    /* ── BASE ──────────────────────────────────────────────────────────────
+    /* â”€â”€ BASE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Same dark base as all pages on this site. */
     body {
       background-color: #06080f;
@@ -47,8 +48,8 @@
       overflow-x: hidden;
     }
 
-    /* ── MESH GRADIENT BACKGROUND ──────────────────────────────────────────
-       Fuchsia-purple aurora glow — Creative suite theme.
+    /* â”€â”€ MESH GRADIENT BACKGROUND â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       Fuchsia-purple aurora glow â€” Creative suite theme.
        More vibrant and playful than the other suites. */
     .mesh-bg {
       background-color: #06080f;
@@ -58,7 +59,7 @@
         radial-gradient(ellipse 50% 40% at 50% 88%, rgba(236,72,153,.07) 0%, transparent 52%);
     }
 
-    /* ── FROSTED GLASS NAVBAR ─────────────────────────────────────────────*/
+    /* â”€â”€ FROSTED GLASS NAVBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     .navbar-glass {
       background: rgba(6, 8, 15, 0.82);
       backdrop-filter: blur(16px);
@@ -66,7 +67,7 @@
       border-bottom: 1px solid rgba(255,255,255,.06);
     }
 
-    /* ── GRADIENT HEADING TEXT ─────────────────────────────────────────────
+    /* â”€â”€ GRADIENT HEADING TEXT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Fuchsia-to-purple gradient text for the h1 heading. */
     .gradient-text {
       background: linear-gradient(135deg, #e879f9 0%, #a855f7 50%, #ec4899 100%);
@@ -75,7 +76,7 @@
       background-clip: text;
     }
 
-    /* ── INPUT FOCUS ───────────────────────────────────────────────────────
+    /* â”€â”€ INPUT FOCUS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Fuchsia glow ring on any focused input or select. */
     .input-field:focus {
       outline: none;
@@ -83,7 +84,7 @@
       border-color: rgba(217, 70, 239, 0.45);
     }
 
-    /* ── CUSTOM DROPDOWN ARROW ─────────────────────────────────────────────
+    /* â”€â”€ CUSTOM DROPDOWN ARROW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Fuchsia chevron arrow replaces the browser's default dropdown icon. */
     .custom-select {
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23d946ef' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
@@ -92,7 +93,7 @@
       padding-right: 40px;
     }
 
-    /* ── GENERATE BUTTON ───────────────────────────────────────────────────
+    /* â”€â”€ GENERATE BUTTON â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Vibrant fuchsia-to-purple gradient. Perfect for the fun meme vibe. */
     .btn-generate {
       background: linear-gradient(135deg, #c026d3 0%, #7c3aed 50%, #db2777 100%);
@@ -103,7 +104,7 @@
     .btn-generate:hover:not(:disabled) { background-position: right center; transform: translateY(-1px); }
     .btn-generate:disabled             { opacity: 0.45; cursor: not-allowed; }
 
-    /* ── SPINNER ───────────────────────────────────────────────────────────*/
+    /* â”€â”€ SPINNER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner {
       width: 17px; height: 17px;
@@ -115,12 +116,12 @@
       vertical-align: middle;
     }
 
-    /* ── MEME IMAGE BOX ────────────────────────────────────────────────────
-       This is the star of the page — it mimics a real meme image.
+    /* â”€â”€ MEME IMAGE BOX â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+       This is the star of the page â€” it mimics a real meme image.
 
        DESIGN BREAKDOWN:
          - Dark gradient background: simulates a dark meme template photo
-         - flex flex-col: stacks Top Text → (empty center) → Bottom Text
+         - flex flex-col: stacks Top Text â†’ (empty center) â†’ Bottom Text
          - min-height: enough space to look like a real meme
          - border: subtle purple glow edge
     */
@@ -135,7 +136,7 @@
       position: relative;
     }
 
-    /* ── MEME TEXT (TOP + BOTTOM) ──────────────────────────────────────────
+    /* â”€â”€ MEME TEXT (TOP + BOTTOM) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        This is the CLASSIC meme font look.
 
        font-family: Impact is the legendary meme font. It's built into
@@ -163,13 +164,13 @@
       word-break: break-word;
     }
 
-    /* ── MEME TEXT POSITIONS ───────────────────────────────────────────────
+    /* â”€â”€ MEME TEXT POSITIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Top text: padded at the top, like classic meme formatting.
        Bottom text: padded at the bottom. */
     .meme-text-top    { padding: 18px 20px 10px; }
     .meme-text-bottom { padding: 10px 20px 18px; margin-top: auto; }
 
-    /* ── SOCIAL MEDIA POST CARD ────────────────────────────────────────────
+    /* â”€â”€ SOCIAL MEDIA POST CARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        The outer wrapper mimics a social media post (like a Twitter/Reddit card).
        It frames the meme with a border and subtle background. */
     .social-card {
@@ -179,7 +180,7 @@
       overflow: hidden;
     }
 
-    /* ── METADATA TAGS ─────────────────────────────────────────────────────*/
+    /* â”€â”€ METADATA TAGS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     .meta-tag {
       font-size: 0.65rem;
       font-weight: 700;
@@ -192,7 +193,7 @@
       display: inline-block;
     }
 
-    /* ── EXAMPLE CHIP HOVER ────────────────────────────────────────────────*/
+    /* â”€â”€ EXAMPLE CHIP HOVER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€*/
     .example-chip { transition: all 0.2s ease; }
     .example-chip:hover {
       background: rgba(217,70,239,0.12);
@@ -200,18 +201,37 @@
       color: #e879f9;
     }
 
-    /* ── ENGAGEMENT BAR (social feel) ─────────────────────────────────────
+    /* â”€â”€ ENGAGEMENT BAR (social feel) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
        Fake "likes" and "shares" at the bottom of the social card. */
     .engage-btn { transition: color 0.2s ease; }
     .engage-btn:hover { color: #e879f9; }
 
-    /* ── SCROLLBAR ─────────────────────────────────────────────────────── */
+    /* â”€â”€ SCROLLBAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     ::-webkit-scrollbar       { width: 6px; }
     ::-webkit-scrollbar-track { background: #0d1117; }
     ::-webkit-scrollbar-thumb { background: #3b1050; border-radius: 4px; }
 
     html { scroll-behavior: smooth; }
   </style>
+
+  <!-- â”€â”€â”€ SEO: Open Graph â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:site_name"   content="EasyAIToolz" />
+  <meta property="og:title"       content="AI Meme Generator - Create Funny Memes Instantly | EasyAIToolz" />
+  <meta property="og:description" content="Generate hilarious, viral-ready memes with AI in seconds. Just describe your idea and get perfect meme text. Free to use." />
+  <meta property="og:url"         content="https://easyaitoolz.ranahammad9995.workers.dev/creative/meme-generator.html" />
+  <meta property="og:image"       content="https://easyaitoolz.ranahammad9995.workers.dev/og-image.png" />
+  <meta property="og:image:width"  content="1200" />
+  <meta property="og:image:height" content="630" />
+  <!-- â”€â”€â”€ SEO: Twitter Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:title"       content="AI Meme Generator - Create Funny Memes Instantly | EasyAIToolz" />
+  <meta name="twitter:description" content="Generate hilarious, viral-ready memes with AI in seconds. Just describe your idea and get perfect meme text. Free to use." />
+  <meta name="twitter:image"       content="https://easyaitoolz.ranahammad9995.workers.dev/og-image.png" />
+  <!-- â”€â”€â”€ SEO: Canonical + Keywords â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <link rel="canonical" href="https://easyaitoolz.ranahammad9995.workers.dev/creative/meme-generator.html" />
+  <meta name="keywords" content="ai meme generator, meme maker, funny meme creator, free meme generator" />
+  <meta name="robots"   content="index, follow" />
 </head>
 
 
@@ -219,7 +239,7 @@
 
 
 <!-- ==============================================================================
-     NAVIGATION BAR — same glass effect on every page of this site
+     NAVIGATION BAR â€” same glass effect on every page of this site
      ============================================================================== -->
 <nav class="navbar-glass fixed top-0 left-0 right-0 z-50">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -301,14 +321,14 @@
 
 
 <!-- ==============================================================================
-     MAIN WORKSPACE — Two-column interactive layout
+     MAIN WORKSPACE â€” Two-column interactive layout
 
      LAYOUT:
-       MOBILE  (< 1024px) → 1 column, panels stack top-to-bottom
-       DESKTOP (>= 1024px) → [350px fixed left] | [flexible right]
+       MOBILE  (< 1024px) â†’ 1 column, panels stack top-to-bottom
+       DESKTOP (>= 1024px) â†’ [350px fixed left] | [flexible right]
 
      The left column is slightly narrower than other tools because
-     the meme has only 2 dropdowns — the right output card needs more room
+     the meme has only 2 dropdowns â€” the right output card needs more room
      to look like a real social media post.
      ============================================================================== -->
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
@@ -328,7 +348,7 @@
         </h2>
 
 
-        <!-- ── INPUT 1: SITUATION / TOPIC ────────────────────────────────
+        <!-- â”€â”€ INPUT 1: SITUATION / TOPIC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              The user types the relatable scenario for the meme.
              Great memes are built on shared experiences:
              - Programmer jokes ("when code works on first try")
@@ -347,7 +367,7 @@
             class="input-field w-full bg-slate-800/80 border border-white/[.10] rounded-xl px-4 py-3 text-white/85 text-sm placeholder-white/20 transition-colors"
           />
 
-          <!-- Example situation chips — clicking fills the input automatically -->
+          <!-- Example situation chips â€” clicking fills the input automatically -->
           <div class="flex flex-wrap gap-1.5 mt-2.5">
             <button onclick="fillSituation(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">Code works first try</button>
             <button onclick="fillSituation(this.innerText)" class="example-chip text-xs bg-white/5 border border-white/8 text-white/38 px-2.5 py-1 rounded-lg">Monday morning meetings</button>
@@ -365,7 +385,7 @@
         </div>
 
 
-        <!-- ── INPUT 2: TARGET AUDIENCE / STYLE ──────────────────────────
+        <!-- â”€â”€ INPUT 2: TARGET AUDIENCE / STYLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              Determines WHICH COMMUNITY's meme language the AI should use.
              Different audiences have different shared references:
                Tech/Programmers    = stack overflow jokes, git commit messages, CSS puns
@@ -388,7 +408,7 @@
         </div>
 
 
-        <!-- ── INPUT 3: HUMOR TYPE ────────────────────────────────────────
+        <!-- â”€â”€ INPUT 3: HUMOR TYPE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              Controls the TONE and EDGE of the meme humor.
                Sarcastic   = dry, ironic, "oh yeah sure" energy
                Wholesome   = warm, positive, feel-good
@@ -409,7 +429,7 @@
         </div>
 
 
-        <!-- ── GENERATE BUTTON ────────────────────────────────────────────
+        <!-- â”€â”€ GENERATE BUTTON â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              onclick="generateMeme()" = calls the main JS function
              id="generateBtn"  = JS disables during API call
              id="btnText"      = changes to "Cooking..." during loading
@@ -447,21 +467,21 @@
          lg:sticky lg:top-24 = stays in view while scrolling on desktop.
 
          LAYOUT OF THIS COLUMN:
-         ┌─────────────────────────────────┐
-         │ social-card                     │
-         │  ┌──────────────────────────┐   │
-         │  │ card header (avatar bar) │   │
-         │  ├──────────────────────────┤   │
-         │  │ meme-image-box           │   │
-         │  │   [TOP TEXT — IMPACT]    │   │
-         │  │   [center icon]          │   │
-         │  │   [BOTTOM TEXT — IMPACT] │   │
-         │  ├──────────────────────────┤   │
-         │  │ template badge           │   │
-         │  ├──────────────────────────┤   │
-         │  │ engagement bar (likes)   │   │
-         │  └──────────────────────────┘   │
-         └─────────────────────────────────┘
+         â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+         â”‚ social-card                     â”‚
+         â”‚  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”   â”‚
+         â”‚  â”‚ card header (avatar bar) â”‚   â”‚
+         â”‚  â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤   â”‚
+         â”‚  â”‚ meme-image-box           â”‚   â”‚
+         â”‚  â”‚   [TOP TEXT â€” IMPACT]    â”‚   â”‚
+         â”‚  â”‚   [center icon]          â”‚   â”‚
+         â”‚  â”‚   [BOTTOM TEXT â€” IMPACT] â”‚   â”‚
+         â”‚  â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤   â”‚
+         â”‚  â”‚ template badge           â”‚   â”‚
+         â”‚  â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤   â”‚
+         â”‚  â”‚ engagement bar (likes)   â”‚   â”‚
+         â”‚  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜   â”‚
+         â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
          ============================================================ -->
     <div class="flex flex-col gap-4 lg:sticky lg:top-24">
 
@@ -470,7 +490,7 @@
            This gives the meme output a real "shareable content" feel. -->
       <div class="social-card" id="memePreviewContainer">
 
-        <!-- ── SOCIAL CARD HEADER ─────────────────────────────────────────
+        <!-- â”€â”€ SOCIAL CARD HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              Mimics the top of a social media post.
              Shows a fake avatar, username, and the copy button. -->
         <div class="flex items-center justify-between px-4 py-3 border-b border-white/[.05]">
@@ -497,17 +517,17 @@
         </div>
 
 
-        <!-- ── MEME OUTPUT AREA ───────────────────────────────────────────
+        <!-- â”€â”€ MEME OUTPUT AREA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
              Two states managed by JavaScript:
-               1. emptyState — shown before any meme is generated
-               2. memeCard   — shown after the AI responds
+               1. emptyState â€” shown before any meme is generated
+               2. memeCard   â€” shown after the AI responds
 
              The memeCard is built as:
-               [template badge] → [meme image box] → [tags] → [engagement bar]
+               [template badge] â†’ [meme image box] â†’ [tags] â†’ [engagement bar]
         -->
         <div class="p-4">
 
-          <!-- ── EMPTY STATE ──────────────────────────────────────────────
+          <!-- â”€â”€ EMPTY STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                Shown when the user hasn't generated yet.
                JavaScript replaces this content with a loading animation,
                then hides this div entirely when the meme card arrives. -->
@@ -544,15 +564,15 @@
           </div><!-- end empty state -->
 
 
-          <!-- ── MEME RESULT CARD ─────────────────────────────────────────
+          <!-- â”€â”€ MEME RESULT CARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                Hidden initially (class="hidden").
                JavaScript calls .classList.remove('hidden') after the AI responds.
 
                STRUCTURE:
-                 1. Template badge   — which famous meme template the AI chose
-                 2. memeImageBox     — the actual meme visual (Impact text on dark bg)
-                 3. memeTags         — humor type + audience tags
-                 4. Engagement bar   — fake likes/shares for social media feel
+                 1. Template badge   â€” which famous meme template the AI chose
+                 2. memeImageBox     â€” the actual meme visual (Impact text on dark bg)
+                 3. memeTags         â€” humor type + audience tags
+                 4. Engagement bar   â€” fake likes/shares for social media feel
           -->
           <div id="memeCard" class="hidden">
 
@@ -566,7 +586,7 @@
 
             <!-- 2. THE ACTUAL MEME VISUAL BOX
                  This is the core meme UI element.
-                 id="memeImageBox" — JavaScript fills this with:
+                 id="memeImageBox" â€” JavaScript fills this with:
                    <div class="meme-text-top">   TOP TEXT   </div>
                    <div class="flex...">          center icon </div>
                    <div class="meme-text-bottom"> BOTTOM TEXT </div>
@@ -580,7 +600,7 @@
 
 
             <!-- 3. METADATA TAGS
-                 id="memeTags" — JavaScript fills with audience + humor badges. -->
+                 id="memeTags" â€” JavaScript fills with audience + humor badges. -->
             <div id="memeTags" class="flex flex-wrap gap-2 mb-3">
               <!-- badges filled by JS -->
             </div>
@@ -588,7 +608,7 @@
 
             <!-- 4. ENGAGEMENT BAR
                  Mimics the like / share / comment bar from social media.
-                 Purely decorative / fun — makes the output feel like real content.
+                 Purely decorative / fun â€” makes the output feel like real content.
                  id="likeCount" and id="shareCount" are randomized by JS. -->
             <div class="flex items-center gap-5 pt-3 border-t border-white/[.05]">
               <button class="engage-btn flex items-center gap-1.5 text-white/35 text-sm hover:text-fuchsia-400 transition-colors">
@@ -638,7 +658,7 @@
 
 
 <!-- ==============================================================================
-     JAVASCRIPT — meme_logic.js embedded here at build time.
+     JAVASCRIPT â€” meme_logic.js embedded here at build time.
      Placed at body bottom so all HTML elements are ready before JS runs.
      ============================================================================== -->
 <script>
@@ -649,12 +669,12 @@
 // ============================================================
 
 
-// ─── FUNCTION 1: generateMeme ────────────────────────────────────────────────
-// The main function. Runs when the user clicks "Generate Meme Idea ⚡".
+// â”€â”€â”€ FUNCTION 1: generateMeme â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// The main function. Runs when the user clicks "Generate Meme Idea âš¡".
 //
 // FULL DATA FLOW:
 //   Step 1: Read the topic text + 2 dropdown values
-//   Step 2: Validate — make sure the user typed a situation/topic
+//   Step 2: Validate â€” make sure the user typed a situation/topic
 //   Step 3: Build the AI system prompt
 //   Step 4: Show loading state (disable button, show spinner in preview box)
 //   Step 5: POST to /api/generate (our secure backend)
@@ -664,12 +684,12 @@
 //   Step 9: Reset the button to normal
 async function generateMeme() {
 
-  // ── STEP 1: Read all user inputs ────────────────────────────────────────
+  // â”€â”€ STEP 1: Read all user inputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var situation = document.getElementById('situationInput').value.trim();
   var audience  = document.getElementById('audienceSelect').value;
   var humor     = document.getElementById('humorSelect').value;
 
-  // ── STEP 2: Validate — topic is required ────────────────────────────────
+  // â”€â”€ STEP 2: Validate â€” topic is required â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (!situation) {
     // Show a hint inside the preview card instead of an annoying alert
     showMemeMessage('&#128172; Enter a situation or topic on the left to generate your meme idea!', 'hint');
@@ -680,7 +700,7 @@ async function generateMeme() {
     return;
   }
 
-  // ── STEP 3: Build the AI System Prompt ──────────────────────────────────
+  // â”€â”€ STEP 3: Build the AI System Prompt â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // CRITICAL: We instruct the AI to return data in a SPECIFIC PARSEABLE FORMAT:
   //   Template: [description] | Top Text: [text] | Bottom Text: [text]
   //
@@ -692,7 +712,7 @@ async function generateMeme() {
     '- Situation / Topic: ' + situation + '\n' +
     '- Target Audience / Style: ' + audience + '\n' +
     '- Humor Type: ' + humor + '\n\n' +
-    'STRICT OUTPUT FORMAT — return EXACTLY this structure, nothing else:\n' +
+    'STRICT OUTPUT FORMAT â€” return EXACTLY this structure, nothing else:\n' +
     'Template: [Name a specific famous meme template or describe the scene, e.g. "Drake Pointing Meme" or "Distracted Boyfriend"] | Top Text: [Short punchy top text, max 8 words, ALL CAPS] | Bottom Text: [Short punchy bottom text, max 8 words, ALL CAPS]\n\n' +
     'RULES:\n' +
     '1. Top Text and Bottom Text MUST be in ALL CAPS\n' +
@@ -701,7 +721,7 @@ async function generateMeme() {
     '4. Keep the humor style strictly ' + humor + '\n' +
     '5. Output ONLY the formatted line above. No explanation, no intro, no outro.';
 
-  // ── STEP 4: Set Loading State ────────────────────────────────────────────
+  // â”€â”€ STEP 4: Set Loading State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var btn     = document.getElementById('generateBtn');
   var btnText = document.getElementById('btnText');
   var btnIcon = document.getElementById('btnIcon');
@@ -726,7 +746,7 @@ async function generateMeme() {
     'loading'
   );
 
-  // ── STEP 5 + 6: POST to backend and await response ──────────────────────
+  // â”€â”€ STEP 5 + 6: POST to backend and await response â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   try {
 
     var response = await fetch('/api/generate', {
@@ -740,7 +760,7 @@ async function generateMeme() {
 
     var data = await response.json();
 
-    // ── STEP 7 + 8: Parse and render ──────────────────────────────────────
+    // â”€â”€ STEP 7 + 8: Parse and render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (data.result) {
       var parsed = parseMemeResponse(data.result.trim());
       renderMemeCard(parsed, situation, audience, humor);
@@ -751,14 +771,14 @@ async function generateMeme() {
 
   } catch(err) { console.error(err); }
 
-  // ── STEP 9: Reset button ─────────────────────────────────────────────────
+  // â”€â”€ STEP 9: Reset button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   btn.disabled        = false;
   btnText.textContent = 'Generate Meme Idea';
-  btnIcon.textContent = '\u26A1'; // ⚡ lightning bolt
+  btnIcon.textContent = '\u26A1'; // âš¡ lightning bolt
 }
 
 
-// ─── FUNCTION 2: parseMemeResponse ───────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 2: parseMemeResponse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Extracts the three parts from the AI's pipe-separated response string.
 //
 // EXPECTED INPUT FORMAT (from the AI):
@@ -787,13 +807,13 @@ function parseMemeResponse(rawText) {
   if (parts.length >= 3) {
     // SUCCESSFUL PARSE: we got all 3 parts
     // For each part, strip the "Label: " prefix and take the rest.
-    // e.g., "Template: Drake Meme" → split on ": " → ["Template", "Drake Meme"]
+    // e.g., "Template: Drake Meme" â†’ split on ": " â†’ ["Template", "Drake Meme"]
     result.template   = extractValue(parts[0], 'Template');
     result.topText    = extractValue(parts[1], 'Top Text');
     result.bottomText = extractValue(parts[2], 'Bottom Text');
 
   } else if (parts.length === 2) {
-    // Partial parse: got 2 parts — assume top/bottom
+    // Partial parse: got 2 parts â€” assume top/bottom
     result.topText    = extractValue(parts[0], 'Top Text');
     result.bottomText = extractValue(parts[1], 'Bottom Text');
 
@@ -816,7 +836,7 @@ function extractValue(str, label) {
 }
 
 
-// ─── FUNCTION 3: renderMemeCard ──────────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 3: renderMemeCard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Takes the parsed meme data and renders the full visual meme preview card.
 //
 // THE MEME PREVIEW MIMICS A REAL MEME:
@@ -826,10 +846,10 @@ function extractValue(str, label) {
 //   - The text-shadow with multiple layers creates the classic "meme font" look
 //
 // Parameters:
-//   parsed   — object from parseMemeResponse() with template/topText/bottomText
-//   situation — user's original topic (for the sharing tags below)
-//   audience  — selected audience (for metadata)
-//   humor     — selected humor type (for metadata)
+//   parsed   â€” object from parseMemeResponse() with template/topText/bottomText
+//   situation â€” user's original topic (for the sharing tags below)
+//   audience  â€” selected audience (for metadata)
+//   humor     â€” selected humor type (for metadata)
 function renderMemeCard(parsed, situation, audience, humor) {
 
   // Save for the copy function
@@ -837,14 +857,14 @@ function renderMemeCard(parsed, situation, audience, humor) {
 
   var container = document.getElementById('memePreviewContainer');
 
-  // ── 1. Template badge ────────────────────────────────────────────────────
+  // â”€â”€ 1. Template badge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   document.getElementById('templateBadge').textContent = '&#127917; ' + escapeHTML(parsed.template);
   document.getElementById('templateBadge').innerHTML =
     '<span class="mr-1" aria-hidden="true">&#127917;</span>' +
     '<span class="font-medium">Template:</span> ' +
     escapeHTML(parsed.template);
 
-  // ── 2. Render the meme image box ─────────────────────────────────────────
+  // â”€â”€ 2. Render the meme image box â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // This DIV mimics a classic meme image:
   //   - A dark gradient background (representing the meme template image)
   //   - TOP TEXT floated to the top center
@@ -866,28 +886,28 @@ function renderMemeCard(parsed, situation, audience, humor) {
       '<span class="meme-text">' + escapeHTML(parsed.bottomText || '') + '</span>' +
     '</div>';
 
-  // ── 3. Show the card (it starts hidden) ──────────────────────────────────
+  // â”€â”€ 3. Show the card (it starts hidden) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   document.getElementById('memeCard').classList.remove('hidden');
   document.getElementById('emptyState').classList.add('hidden');
 
-  // ── 4. Update the engagement bar (fake but fun social media feel) ─────────
+  // â”€â”€ 4. Update the engagement bar (fake but fun social media feel) â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Randomize "like" and "share" counts slightly on each generation
   document.getElementById('likeCount').textContent = (Math.floor(Math.random() * 9) + 1) + 'K';
   document.getElementById('shareCount').textContent = (Math.floor(Math.random() * 900) + 100);
 
-  // ── 5. Show metadata tags below the meme card ────────────────────────────
+  // â”€â”€ 5. Show metadata tags below the meme card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   document.getElementById('memeTags').innerHTML =
     '<span class="meta-tag bg-fuchsia-500/10 border-fuchsia-500/20 text-fuchsia-400">' + escapeHTML(humor) + '</span>' +
     '<span class="meta-tag bg-purple-500/10 border-purple-500/20 text-purple-400">' + escapeHTML(audience) + '</span>';
 }
 
 
-// ─── FUNCTION 4: showMemeMessage ─────────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 4: showMemeMessage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Shows a loading, hint, or error message inside the meme preview area.
 //
 // Parameters:
-//   html — the HTML content to show (can include emojis and tags)
-//   type — 'loading', 'hint', or 'error' (controls styling)
+//   html â€” the HTML content to show (can include emojis and tags)
+//   type â€” 'loading', 'hint', or 'error' (controls styling)
 function showMemeMessage(html, type) {
   // Hide the result card, show the empty state placeholder
   document.getElementById('memeCard').classList.add('hidden');
@@ -906,7 +926,7 @@ function showMemeMessage(html, type) {
 }
 
 
-// ─── FUNCTION 5: copyMemeText ────────────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 5: copyMemeText â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Copies the meme text (Top + Bottom) to the clipboard.
 async function copyMemeText() {
   var meme = window._currentMemeData;
@@ -939,7 +959,7 @@ async function copyMemeText() {
 }
 
 
-// ─── FUNCTION 6: fillSituation ───────────────────────────────────────────────
+// â”€â”€â”€ FUNCTION 6: fillSituation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Fills the situation text input with an example chip text.
 function fillSituation(text) {
   document.getElementById('situationInput').value = text;
@@ -947,9 +967,9 @@ function fillSituation(text) {
 }
 
 
-// ─── HELPER: escapeHTML ───────────────────────────────────────────────────────
+// â”€â”€â”€ HELPER: escapeHTML â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Safely escapes all HTML special characters before inserting into innerHTML.
-// Prevents XSS — if the AI response contained <script> tags, this neutralizes them.
+// Prevents XSS â€” if the AI response contained <script> tags, this neutralizes them.
 function escapeHTML(str) {
   var div = document.createElement('div');
   div.appendChild(document.createTextNode(String(str)));
@@ -957,7 +977,7 @@ function escapeHTML(str) {
 }
 
 
-// ─── KEYBOARD SHORTCUT ────────────────────────────────────────────────────────
+// â”€â”€â”€ KEYBOARD SHORTCUT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Ctrl+Enter / Cmd+Enter triggers generation from anywhere in the form.
 document.getElementById('situationInput').addEventListener('keydown', function(e) {
   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
